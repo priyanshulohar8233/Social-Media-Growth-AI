@@ -2,7 +2,7 @@
   "customProviders": [
     {
       "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
-      "apiKey": "AQ.Ab8RN6IdQtOjTukcB4QyQurlDm_V-Tbb1HjwJ5X_4xQKZr3KLw",
+      "apiKey": "YOUR_GOOGLE_API_KEY",
       "label": "Google Gemini Direct",
       "models": [
         {
@@ -51,13 +51,13 @@
   "keys": [
     {
       "platform": "google",
-      "key": "AQ.Ab8RN6IdQtOjTukcB4QyQurlDm_V-Tbb1HjwJ5X_4xQKZr3KLw",
+      "key": "YOUR_GOOGLE_API_KEY",
       "label": "Priyanshu-GoogleAI",
       "enabled": true
     },
     {
       "platform": "groq",
-      "key": "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",
+      "key": "YOUR_GROQ_API_KEY",
       "label": "Priyanshu-Groq",
       "enabled": true
     }
