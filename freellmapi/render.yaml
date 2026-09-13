@@ -8,7 +8,7 @@ services:
   - type: web
     name: freellmapi
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/ping
     envVars:
@@ -28,7 +28,3 @@ services:
       # Optional: set your provider API keys here (or via the dashboard).
       # - key: OPENAI_API_KEY
       #   sync: false
-    disk:
-      name: freellmapi-data
-      mountPath: /app/server/data
-      sizeGB: 1
