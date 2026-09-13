@@ -1,0 +1,10 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "git clone": true,
+        "git remote": true,
+        "/^gh auth status 2>&1; echo \"---\"; git config --global user\\.name; git config --global user\\.email$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

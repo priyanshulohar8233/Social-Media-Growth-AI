@@ -1,0 +1,40 @@
+# Render.com blueprint — deploy "BrainGrow" as a Web Service.
+# 1. Push this repo to GitHub and connect it in Render dashboard.
+# 2. This file creates the service automatically ("Blueprint" from repo root).
+#     - SQLite is stored on a persistent disk at /data (single-instance friendly).
+#     - For scale-out, switch DATABASE_URL to Postgres (Neon/Supabase/Render Postgres) and drop the disk.
+
+databases: []
+
+services:
+  - type: web
+    name: braingrow
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && npx next start --port 8080
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://braingrow.onrender.com
+      - key: PORT
+        value: 8080
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRY
+        value: 7d
+      - key: DATABASE_URL
+        value: file:/data/dev.db
+      - key: LOCAL_STORAGE_PATH
+        value: /data/storage
+      - key: LOG_LEVEL
+        value: info
+      # Add real values in Render dashboard after blueprint is created:
+      #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+      #   GOOGLE_REDIRECT_URI=https://braingrow.onrender.com/api/auth/callback/google
+    disk:
+      name: braingrow-data
+      mountPath: /data
+      sizeGB: 1

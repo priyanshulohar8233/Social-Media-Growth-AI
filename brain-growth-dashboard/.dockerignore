@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env.*.local
+prisma/dev.db
+storage
+*.log
+.gitignore
+README.md
+Dockerfile

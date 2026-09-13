@@ -1,0 +1,1028 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────────────────
+
+// ── Core ───────────────────────────────────────────────────────────
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  image        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+  auditLogs    AuditLog[]
+  // relations
+  authoredContent Content[]  @relation("AuthoredContent")
+  approvalsRequested Approval[] @relation("ApprovalRequester")
+  approvalsReviewed  Approval[] @relation("ApprovalReviewer")
+  verifiedMemories   Memory[]   @relation("MemoryVerifier")
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  industry    String?
+  website     String?
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profileType       String   @default("BUSINESS") // BUSINESS | CREATOR | PERSONAL_BRAND | AGENCY
+
+  // Settings / policy
+  modelPolicy          String @default("BEST_AVAILABLE")
+  requireApproval      Boolean     @default(true)
+  allowPaidGeneration  Boolean     @default(false)
+  allowAutonomousReplan Boolean    @default(false)
+  allowedProviders     String?     // JSON array string
+  allowedPlatforms     String?     // JSON array string
+
+  memberships          Membership[]
+  creatorProfile       CreatorProfile?
+  profile              CompanyProfile?
+  businessGoals        BusinessGoal[]
+  products             Product[]
+  services             Service[]
+  brandRules           BrandRule[]
+  audiences            Audience[]
+  audienceSegments     AudienceSegment[]
+  socialAccounts       SocialAccount[]
+  socialPosts          SocialPost[]
+  contents             Content[]
+  contentVariants      ContentVariant[]
+  calendars            ContentCalendar[]
+  calendarItems        CalendarItem[]
+  approvals            Approval[]
+  mediaAssets          MediaAsset[]
+  documents            Document[]
+  documentChunks       DocumentChunk[]
+  memories             Memory[]
+  brainInsights        BrainInsight[]
+  learningEvents       LearningEvent[]
+  trends               Trend[]
+  competitors          Competitor[]
+  contentDnas          ContentDna[]
+  inboxMessages        InboxMessage[]
+  experiments          Experiment[]
+  analyticsEvents      AnalyticsEvent[]
+  performanceMetrics   PerformanceMetric[]
+  leads                Lead[]
+  conversions          Conversion[]
+  roiRecords           RoiRecord[]
+  growthOpportunities  GrowthOpportunity[]
+  growthRecommendations GrowthRecommendation[]
+  nextBestActions      NextBestAction[]
+  agentRuns            AgentRun[]
+  generationJobs       GenerationJob[]
+  generationAssets     GenerationAsset[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  messagingIdentities  MessagingIdentity[]
+  contentPillars       ContentPillar[]
+  collaborations       Collaboration[]
+  brandDeals           BrandDeal[]
+  monetizationChannels MonetizationChannel[]
+  models               Model[]
+  providers            Provider[]
+  aiUsage              AiUsage[]
+
+  @@index([slug])
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String     @default("MEMBER")
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@index([userId])
+}
+
+model CompanyProfile {
+  id                 String   @id @default(cuid())
+  companyId          String   @unique
+  businessGoals      String?  // free text / JSON
+  targetAudience     String?
+  productsServices   String?  // summary
+  brandVoice         String?
+  brandRestrictions  String?
+  contentPreferences String?  // JSON string
+  socialAccountsSummary String?
+  location           String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model BusinessGoal {
+  id          String   @id @default(cuid())
+  companyId   String
+  title       String
+  description String?
+  targetDate  DateTime?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model BrandRule {
+  id        String   @id @default(cuid())
+  companyId String
+  rule      String
+  category  String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  category    String?
+  price       Float?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  category    String?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Audience {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  demographics String? // JSON
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model AudienceSegment {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String   // e.g. price-sensitive, premium, researchers
+  description String?
+  criteria    String?  // JSON
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+// ── Social ─────────────────────────────────────────────────────────
+
+model SocialAccount {
+  id           String   @id @default(cuid())
+  companyId    String
+  platform     String
+  handle       String
+  displayName  String?
+  accessToken  String?  // encrypted
+  refreshToken String?
+  tokenExpiry  DateTime?
+  status       String   @default("connected") // connected | disconnected | error
+  meta         String?  // JSON
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@unique([companyId, platform, handle])
+  @@index([companyId])
+}
+
+model SocialPost {
+  id          String   @id @default(cuid())
+  companyId   String
+  accountId   String?
+  platform    String
+  externalId  String?
+  contentId   String?  // link to Content
+  caption     String?
+  mediaUrls   String?  // JSON array
+  status      String   @default("published")
+  publishedAt DateTime?
+  metrics     String?  // JSON: likes, comments, shares, reach, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+  @@index([platform])
+}
+
+// ── Social Inbox (comments / DMs / mentions) ───────────────────────
+
+model InboxMessage {
+  id               String    @id @default(cuid())
+  companyId        String
+  platform         String
+  channelType      String    @default("message") // comment | dm | mention | message
+  direction        String    @default("inbound") // inbound | outbound
+  threadId         String?   // groups a conversation
+  authorHandle     String?
+  authorName       String?
+  content          String
+  sentiment        String?   // positive | neutral | negative | question
+  intent           String?   // support | sales | feedback | spam | general
+  status           String    @default("unread") // unread | read | replied | archived
+  replyText        String?
+  repliedAt        DateTime?
+  aiSuggestion     String?   // suggested reply (server-generated, labeled mock when dev)
+  aiSuggestionTone String?
+  sourceMessageId  String?
+  meta             String?   // JSON
+  createdAt        DateTime  @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+  @@index([platform])
+  @@index([status])
+}
+
+// ── Content & Calendar ─────────────────────────────────────────────
+
+model Content {
+  id            String        @id @default(cuid())
+  companyId     String
+  title         String
+  body          String?
+  hook          String?
+  cta           String?
+  hashtags      String?       // JSON array
+  platform      String
+  contentType   String   @default("POST")
+  status        String @default("DRAFT")
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  authorId      String?
+  calendarId    String?
+  calendarItemId String?      @unique
+  visualPrompt  String?
+  strategyReason String?
+  predictedScore Float?
+  reviewNotes   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author   User?   @relation("AuthoredContent", fields: [authorId], references: [id])
+  calendar ContentCalendar? @relation(fields: [calendarId], references: [id])
+  variants ContentVariant[]
+  approvals Approval[]
+  generationAssets GenerationAsset[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([platform])
+}
+
+model ContentVariant {
+  id        String   @id @default(cuid())
+  companyId String
+  contentId String
+  variant String @default("A")
+  hook      String?
+  body      String?
+  cta       String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([companyId])
+
+  // for A/B testing
+}
+
+model ContentCalendar {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  month     Int
+  year      Int
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items   CalendarItem[]
+  contents Content[]
+
+  @@unique([companyId, month, year])
+  @@index([companyId])
+}
+
+model CalendarItem {
+  id         String        @id @default(cuid())
+  companyId  String
+  calendarId String
+  contentId  String?       @unique
+  date       DateTime
+  platform   String
+  status     String @default("DRAFT")
+  title      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  company  Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  calendar ContentCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([calendarId])
+  @@index([date])
+}
+
+model Approval {
+  id          String         @id @default(cuid())
+  companyId   String
+  contentId   String
+  requestedBy String
+  reviewedBy  String?
+  status      String @default("PENDING")
+  comments    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  content   Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  requester User    @relation("ApprovalRequester", fields: [requestedBy], references: [id])
+  reviewer  User?   @relation("ApprovalReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([companyId])
+  @@index([contentId])
+  @@index([status])
+}
+
+// ── Media & Documents ──────────────────────────────────────────────
+
+model MediaAsset {
+  id         String   @id @default(cuid())
+  companyId  String
+  filename   String
+  originalName String
+  mimeType   String
+  size       Int
+  url        String
+  type       String   // image | video | document | other
+  uploadedBy String?
+  analysis   String?  // JSON: hook, pacing, CTA, etc.
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  companyId     String
+  title         String
+  filename      String
+  mimeType      String
+  size          Int
+  url           String
+  uploadedBy    String?
+  extractedText String?
+  status        String   @default("pending") // pending | processing | verified | rejected
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  chunks  DocumentChunk[]
+
+  @@index([companyId])
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  companyId  String
+  documentId String
+  chunkIndex Int
+  content    String
+  embedding  String?  // JSON array string
+  metadata   String?  // JSON
+  createdAt  DateTime @default(now())
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([companyId])
+}
+
+// ── Memory ─────────────────────────────────────────────────────────
+
+model Memory {
+  id               String             @id @default(cuid())
+  companyId        String
+  type             String
+  content          String
+  source           String?
+  provenance       String?            // JSON
+  confidence       Float?             @default(0.8)
+  verificationStatus String @default("PENDING")
+  verifiedBy       String?
+  verifiedAt       DateTime?
+  expiresAt        DateTime?
+  relatedContentId String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  verifier User?   @relation("MemoryVerifier", fields: [verifiedBy], references: [id])
+  linkedInsights BrainInsight[]
+
+  @@index([companyId])
+  @@index([type])
+  @@index([verificationStatus])
+}
+
+// ── Adaptive Brain / Learning Intelligence ─────────────────────────
+
+model BrainInsight {
+  id               String    @id @default(cuid())
+  companyId        String
+  type             String    // FACT | OBSERVATION | INFERENCE | PREDICTION
+  content          String
+  confidence       Float     @default(0.5)
+  evidenceCount    Int       @default(0)
+  sampleSize       Int       @default(0)
+  source           String?   // e.g. content-performance | approval | user | competitor | trend
+  status           String    @default("CANDIDATE") // CANDIDATE | VALIDATED | ACTIVE | STALE | REJECTED | SUPERSEDED
+  entityKind       String?   // CONTENT | COMPETITOR | TREND | TOPIC | POSTING_TIME | FORMAT
+  entityId         String?
+  payload          String?   // JSON: raw supporting event payload (provenance)
+  relatedMemoryId  String?   // links to a verified Memory fact when promoted
+  feedback         String?   // user feedback text / correction
+  lastReinforcedAt DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  memory  Memory?  @relation(fields: [relatedMemoryId], references: [id])
+
+  @@index([companyId])
+  @@index([type])
+  @@index([status])
+  @@index([entityKind])
+  @@index([companyId, status])
+}
+
+model LearningEvent {
+  id          String    @id @default(cuid())
+  companyId   String
+  eventType   String    // content_published | content_performance | approval_decision | competitor_observed | trend_observed | audience_signal | user_feedback
+  payload     String    // JSON
+  source      String?   // route / agent / user
+  dedupeKey   String?
+  status      String    @default("PENDING") // PENDING | PROCESSED | SKIPPED
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([eventType])
+  @@index([dedupeKey])
+  @@index([status])
+}
+
+// ── Intelligence ───────────────────────────────────────────────────
+
+model Trend {
+  id              String   @id @default(cuid())
+  companyId       String
+  title           String
+  description     String?
+  lifecycle       String   @default("emerging") // emerging|rising|peak|saturating|declining
+  relevance       String?  // high|medium|low
+  recommendation  String?  // USE_NOW | WATCH | ADAPT | AVOID
+  source          String?
+  confidence      Float?   @default(0.7)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Competitor {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  handle      String?
+  platform    String?
+  website     String?
+  notes       String?
+  patterns    String?  // JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model ContentDna {
+  id          String   @id @default(cuid())
+  companyId   String
+  contentId   String?
+  hook        String?
+  topic       String?
+  format      String?
+  visualStyle String?
+  cta         String?
+  timing      String?
+  outcome     String?  // JSON metrics
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Experiment {
+  id          String   @id @default(cuid())
+  companyId   String
+  hypothesis  String
+  status      String   @default("running") // running | completed | cancelled
+  winnerId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company  Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  variants ExperimentVariant[]
+
+  @@index([companyId])
+}
+
+model ExperimentVariant {
+  id           String   @id @default(cuid())
+  experimentId String
+  label        String
+  hook         String?
+  contentId    String?
+  metrics      String?  // JSON
+  createdAt    DateTime @default(now())
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  @@index([experimentId])
+}
+
+// ── Analytics & Growth ─────────────────────────────────────────────
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  companyId String
+  contentId String?
+  platform  String?
+  eventType String   // view | like | comment | share | click | etc.
+  value     Float    @default(1)
+  meta      String?  // JSON
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+  @@index([contentId])
+  @@index([eventType])
+}
+
+model PerformanceMetric {
+  id        String   @id @default(cuid())
+  companyId String
+  contentId String?
+  platform  String?
+  metric    String   // reach | impressions | engagement | engagement_rate | etc.
+  value     Float
+  period    String?  // 7d | 30d | etc.
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  companyId String
+  source    String?  // post | website | etc.
+  contentId String?
+  email     String?
+  name      String?
+  status    String   @default("new")
+  meta      String?  // JSON
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model Conversion {
+  id        String   @id @default(cuid())
+  companyId String
+  leadId    String?
+  value     Float?
+  currency  String?  @default("INR")
+  meta      String?  // JSON
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model RoiRecord {
+  id        String   @id @default(cuid())
+  companyId String
+  period    String   // e.g. 2026-08
+  spend     Float    @default(0)
+  revenue   Float    @default(0)
+  roi       Float?
+  meta      String?  // JSON
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+  @@index([period])
+}
+
+model GrowthOpportunity {
+  id          String         @id @default(cuid())
+  companyId   String
+  title       String
+  description String?
+  type        String @default("GROWTH")
+  evidence    String?        // JSON
+  impact      String?
+  confidence  Float?         @default(0.7)
+  status      String         @default("open") // open | accepted | rejected | implemented
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model GrowthRecommendation {
+  id          String   @id @default(cuid())
+  companyId   String
+  title       String
+  description String?
+  reasoning   String?
+  evidence    String?  // JSON
+  expectedImpact String?
+  confidence  Float?   @default(0.7)
+  requiredApproval Boolean @default(true)
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model NextBestAction {
+  id          String   @id @default(cuid())
+  companyId   String
+  title       String
+  description String?
+  reasoning   String?
+  evidence    String?  // JSON
+  expectedImpact String?
+  confidence  Float?   @default(0.7)
+  status      String   @default("pending") // pending | approved | executed | dismissed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+// ── Agents & Jobs ──────────────────────────────────────────────────
+
+model AgentRun {
+  id        String    @id @default(cuid())
+  companyId String?
+  agentType String
+  status    String @default("QUEUED")
+  input     String?   // JSON
+  output    String?   // JSON
+  error     String?
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  company Company?   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tasks   AgentTask[]
+  toolCalls ToolCall[]
+
+  @@index([companyId])
+  @@index([agentType])
+  @@index([status])
+}
+
+model AgentTask {
+  id         String    @id @default(cuid())
+  runId      String
+  name       String
+  status     String @default("QUEUED")
+  input      String?   // JSON
+  output     String?   // JSON
+  error      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  run AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  @@index([runId])
+}
+
+model ToolCall {
+  id        String   @id @default(cuid())
+  runId     String
+  tool      String
+  input     String?  // JSON
+  output    String?  // JSON
+  createdAt DateTime @default(now())
+
+  run AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  @@index([runId])
+}
+
+// ── Models & Providers ─────────────────────────────────────────────
+
+model Provider {
+  id          String   @id @default(cuid())
+  companyId   String?  // null = global
+  name        String   // openai | anthropic | local | fal | comfyui | etc.
+  displayName String
+  enabled     Boolean  @default(true)
+  config      String?  // JSON (keys encrypted ref)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  models  Model[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model Model {
+  id             String   @id @default(cuid())
+  companyId      String?  // null = global
+  providerId     String?
+  modelId        String   // e.g. gpt-4o-mini, claude-3-haiku
+  displayName    String
+  capabilities   String   // JSON array: ["reasoning","vision","image_generation",...]
+  contextLength  Int?
+  vision         Boolean  @default(false)
+  toolCalling    Boolean  @default(false)
+  structuredOutput Boolean @default(false)
+  imageGen       Boolean  @default(false)
+  videoGen       Boolean  @default(false)
+  embedding      Boolean  @default(false)
+  audio          Boolean  @default(false)
+  enabled        Boolean  @default(true)
+  costPer1k      Float?   // estimated
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company  Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  provider Provider? @relation(fields: [providerId], references: [id])
+
+  @@index([providerId])
+  @@index([companyId])
+}
+
+model GenerationJob {
+  id          String           @id @default(cuid())
+  companyId   String
+  kind        String
+  prompt      String?
+  modelId     String?
+  provider    String?
+  status      String @default("QUEUED")
+  input       String?          // JSON
+  output      String?          // JSON
+  error       String?
+  cost        Float?
+  tokensUsed  Int?
+  attempts    Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assets  GenerationAsset[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([kind])
+}
+
+model GenerationAsset {
+  id        String   @id @default(cuid())
+  companyId String
+  jobId     String?
+  contentId String?
+  url       String
+  type      String   // image | video | audio | text
+  meta      String?  // JSON
+  createdAt DateTime @default(now())
+
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job     GenerationJob? @relation(fields: [jobId], references: [id])
+  content Content?       @relation(fields: [contentId], references: [id])
+
+  @@index([companyId])
+  @@index([jobId])
+}
+
+// ── AI Usage / cost tracking ───────────────────────────────────────
+
+model AiUsage {
+  id                String   @id @default(cuid())
+  companyId         String
+  userId            String?
+  agent             String?   // agent / feature that triggered the call
+  task              String?   // task category (chat | content | research | ...)
+  capability        String?   // reasoning | research | writing | image_generation | ...
+  modelId           String
+  providerName      String
+  status            String   @default("success") // success | error | fallback | timeout
+  promptTokens      Int?     @default(0)
+  completionTokens  Int?     @default(0)
+  totalTokens       Int?     @default(0)
+  cost              Float?   @default(0)
+  latencyMs         Int?
+  meta              String?  // JSON
+  createdAt         DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([createdAt])
+  @@index([providerName])
+}
+
+// ── System ─────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String?
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  meta      String?  // JSON
+  ip        String?
+  createdAt DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?    @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([action])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  companyId String?
+  userId    String?
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+  @@index([userId])
+}
+
+model MessagingIdentity {
+  id        String   @id @default(cuid())
+  companyId String?
+  userId    String
+  platform  String   // whatsapp | telegram
+  handle    String   // phone or username
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@unique([platform, handle])
+  @@index([companyId])
+  @@index([userId])
+}
+
+// ── Creator / Personal Brand ───────────────────────────────────────
+
+model CreatorProfile {
+  id              String   @id @default(cuid())
+  companyId       String   @unique
+  creatorNiche    String?
+  contentNiche    String?
+  personalBrand   String?
+  contentPillars  String?
+  creatorVoice    String?
+  personality     String?
+  speakingStyle   String?
+  visualStyle     String?
+  audience        String?
+  creatorGoals    String?
+  monetization    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pillars ContentPillar[]
+}
+
+model ContentPillar {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  creatorProfileId String?
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  profile CreatorProfile? @relation(fields: [creatorProfileId], references: [id])
+
+  @@index([companyId])
+}
+
+model Collaboration {
+  id          String   @id @default(cuid())
+  companyId   String
+  partnerName String
+  partnerHandle String?
+  niche       String?
+  matchScore  Float?
+  status      String   @default("proposed")
+  idea        String?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model BrandDeal {
+  id           String   @id @default(cuid())
+  companyId    String
+  brand        String
+  campaign     String?
+  deliverables String?
+  platform     String?
+  deadline     DateTime?
+  status       String   @default("pending")
+  compensation String?
+  createdAt    DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}
+
+model MonetizationChannel {
+  id          String   @id @default(cuid())
+  companyId   String
+  type        String
+  description String?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+}

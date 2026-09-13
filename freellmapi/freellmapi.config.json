@@ -1,0 +1,65 @@
+{
+  "customProviders": [
+    {
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "apiKey": "AQ.Ab8RN6IdQtOjTukcB4QyQurlDm_V-Tbb1HjwJ5X_4xQKZr3KLw",
+      "label": "Google Gemini Direct",
+      "models": [
+        {
+          "model": "gemini-flash-latest",
+          "displayName": "Gemini Flash (latest, fast)",
+          "supportsTools": true
+        },
+        {
+          "model": "gemini-3.6-flash",
+          "displayName": "Gemini 3.6 Flash",
+          "supportsTools": true
+        },
+        {
+          "model": "gemini-3.7-flash",
+          "displayName": "Gemini 3.7 Flash",
+          "supportsTools": true
+        }
+      ]
+    },
+    {
+      "baseUrl": "http://localhost:11434/v1",
+      "apiKey": "ollama-local",
+      "label": "Ollama Local",
+      "models": [
+        {
+          "model": "gemma4:latest",
+          "displayName": "Gemma 4 9B (local, best for content)",
+          "supportsTools": false
+        },
+        {
+          "model": "deepseek-r1:8b",
+          "displayName": "DeepSeek R1 8B (local)",
+          "supportsTools": false
+        },
+        {
+          "model": "qwen2.5-coder:14b",
+          "displayName": "Qwen Coder 14B (local)",
+          "supportsTools": false
+        }
+      ]
+    }
+  ],
+  "routing": {
+    "strategy": "balanced"
+  },
+  "keys": [
+    {
+      "platform": "google",
+      "key": "AQ.Ab8RN6IdQtOjTukcB4QyQurlDm_V-Tbb1HjwJ5X_4xQKZr3KLw",
+      "label": "Priyanshu-GoogleAI",
+      "enabled": true
+    },
+    {
+      "platform": "groq",
+      "key": "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",
+      "label": "Priyanshu-Groq",
+      "enabled": true
+    }
+  ]
+}
