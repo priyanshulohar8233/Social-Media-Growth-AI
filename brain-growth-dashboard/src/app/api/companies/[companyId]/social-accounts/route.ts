@@ -33,6 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ comp
       displayName: a.displayName,
       status: a.status,
       followers,
+      hasKey: Boolean(a.accessToken),
     };
   });
 
@@ -51,20 +52,40 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
   }
 
   const body = await request.json();
-  const { platform, handle, action } = body as { platform: string; handle?: string; action: "connect" | "disconnect" };
+  const { platform, handle, apiKey, action } = body as {
+    platform: string;
+    handle?: string;
+    apiKey?: string;
+    action: "connect" | "disconnect";
+  };
   if (!platform) return NextResponse.json({ error: "platform required" }, { status: 400 });
 
   if (action === "connect") {
-    const account = await prisma.socialAccount.upsert({
-      where: { companyId_platform_handle: { companyId, platform, handle: handle || `@${platform.toLowerCase()}` } },
-      update: { status: "connected" },
-      create: {
+    // Reuse the existing account for this platform (one account per platform)
+    const existing = await prisma.socialAccount.findFirst({
+      where: { companyId, platform },
+    });
+    if (existing) {
+      const account = await prisma.socialAccount.update({
+        where: { id: existing.id },
+        data: {
+          status: "connected",
+          handle: handle || existing.handle,
+          displayName: platform.charAt(0).toUpperCase() + platform.slice(1),
+          ...(apiKey ? { accessToken: apiKey } : {}),
+        },
+      });
+      return NextResponse.json({ account }, { status: 200 });
+    }
+    const account = await prisma.socialAccount.create({
+      data: {
         companyId,
         platform,
         handle: handle || `@${platform.toLowerCase()}`,
         displayName: platform.charAt(0).toUpperCase() + platform.slice(1),
         status: "connected",
-        meta: JSON.stringify({ followers: 1000 + (Math.abs(hash(companyId + platform)) % 50000) }),
+        accessToken: apiKey || null,
+        meta: JSON.stringify({ followers: 0 }),
       },
     });
     return NextResponse.json({ account }, { status: 201 });
@@ -79,10 +100,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
   }
 
   return NextResponse.json({ error: "action must be connect or disconnect" }, { status: 400 });
-}
-
-function hash(str: string): number {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
-  return Math.abs(h);
 }

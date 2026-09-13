@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import type { Capability, ModelDef, ModelPolicy, ProviderName } from "@/lib/models/types";
 import { getModelsForCapabilityAll, isProviderAllowed } from "@/lib/models/registry";
 import { mockLLM } from "@/lib/providers/mock";
-import { openaiLLM, anthropicLLM, ProviderUnavailableError } from "@/lib/providers/http";
+import { openaiLLM, anthropicLLM, freellmapiLLM, ProviderUnavailableError } from "@/lib/providers/http";
 import type { GenerateOutput } from "@/lib/providers/types";
 import { sanitizePrompt } from "@/lib/harness";
 import { logger } from "@/lib/logger";
@@ -22,6 +22,7 @@ const LLM_ADAPTERS: Record<string, typeof mockLLM> = {
   mock: mockLLM,
   openai: openaiLLM,
   anthropic: anthropicLLM,
+  freellmapi: freellmapiLLM,
 };
 
 export interface AiGenerateParams {
@@ -192,5 +193,5 @@ async function recordUsage(
 }
 
 export function getUsageModelForProvider(provider: string): ProviderName | null {
-  return (["openai", "anthropic", "mock"] as ProviderName[]).includes(provider as ProviderName) ? (provider as ProviderName) : null;
+  return (["openai", "anthropic", "freellmapi", "mock"] as ProviderName[]).includes(provider as ProviderName) ? (provider as ProviderName) : null;
 }

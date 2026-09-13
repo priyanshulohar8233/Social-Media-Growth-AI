@@ -1,5 +1,17 @@
 import { ModelDef, Capability, ModelPolicy, ProviderName } from "./types";
 
+// Auto-enable providers whose API keys are configured in env.
+let envApplied = false;
+function applyEnvOverrides(): void {
+  if (envApplied) return;
+  envApplied = true;
+  if (process.env.FREELLMAPI_API_KEY?.trim()) {
+    for (const m of MODELS) {
+      if (m.provider === "freellmapi") m.enabled = true;
+    }
+  }
+}
+
 // Global registry — seeded from config, can be extended via DB
 const MODELS: ModelDef[] = [
   {
@@ -103,25 +115,89 @@ const MODELS: ModelDef[] = [
     speed: 0.9,
     requiresPaid: true,
   },
+  // FreeLLMAPI — OpenAI-compatible gateway routing to Google/Groq/OpenRouter/etc.
+  // Enabled when FREELLMAPI_API_KEY is configured (see providers/http.ts).
+  {
+    id: "gemini-2.5-flash",
+    provider: "freellmapi",
+    displayName: "Gemini 2.5 Flash (via FreeLLMAPI)",
+    capabilities: ["reasoning", "research", "writing", "vision"],
+    contextLength: 1048576,
+    vision: true,
+    toolCalling: true,
+    structuredOutput: true,
+    enabled: false,
+    costPer1k: 0,
+    quality: 0.9,
+    speed: 0.9,
+    requiresPaid: false,
+  },
+  {
+    id: "gemini-2.5-flash-lite",
+    provider: "freellmapi",
+    displayName: "Gemini 2.5 Flash-Lite (via FreeLLMAPI)",
+    capabilities: ["reasoning", "research", "writing"],
+    contextLength: 1048576,
+    toolCalling: true,
+    structuredOutput: true,
+    enabled: false,
+    costPer1k: 0,
+    quality: 0.85,
+    speed: 0.95,
+    requiresPaid: false,
+  },
+  {
+    id: "llama-3.3-70b-versatile",
+    provider: "freellmapi",
+    displayName: "Llama 3.3 70B (via FreeLLMAPI)",
+    capabilities: ["reasoning", "research", "writing"],
+    contextLength: 131072,
+    toolCalling: true,
+    structuredOutput: true,
+    enabled: false,
+    costPer1k: 0,
+    quality: 0.88,
+    speed: 0.85,
+    requiresPaid: false,
+  },
+  {
+    id: "openai/gpt-oss-120b",
+    provider: "freellmapi",
+    displayName: "GPT-OSS 120B (via FreeLLMAPI)",
+    capabilities: ["reasoning", "research", "writing", "coding"],
+    contextLength: 131072,
+    toolCalling: true,
+    structuredOutput: true,
+    enabled: false,
+    costPer1k: 0,
+    quality: 0.89,
+    speed: 0.8,
+    requiresPaid: false,
+  },
 ];
 
 export function getAllModels(): ModelDef[] {
+  applyEnvOverrides();
   return MODELS.filter((m) => m.enabled);
 }
 
 export function getAllModelsUnfiltered(): ModelDef[] {
+  applyEnvOverrides();
   return [...MODELS];
 }
 
 export function getModelsForCapability(capability: Capability): ModelDef[] {
+  applyEnvOverrides();
   return MODELS.filter((m) => m.enabled && m.capabilities.includes(capability));
 }
 
 export function getModelsForCapabilityAll(capability: Capability): ModelDef[] {
+  applyEnvOverrides();
   return MODELS.filter((m) => m.capabilities.includes(capability));
 }
 
 export function getModelById(id: string): ModelDef | undefined {
+  applyEnvOverrides();
   return MODELS.find((m) => m.id === id);
 }
 

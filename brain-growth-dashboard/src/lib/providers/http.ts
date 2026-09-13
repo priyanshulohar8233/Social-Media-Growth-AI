@@ -131,3 +131,54 @@ export const anthropicLLM: LLMProvider = {
     };
   },
 };
+
+/**
+ * FreeLLMAPI — OpenAI-compatible gateway (self-hosted LLM router).
+ * Routes to Google/Groq/OpenRouter/Ollama/etc. using keys configured in the
+ * FreeLLMAPI dashboard. Requires FREELLMAPI_API_KEY (the unified API key).
+ */
+export const freellmapiLLM: LLMProvider = {
+  name: "freellmapi",
+  async generate(input: GenerateInput): Promise<GenerateOutput> {
+    const apiKey = requireKey("FREELLMAPI_API_KEY");
+    const baseUrl = (process.env.FREELLMAPI_BASE_URL || "https://freellmapi.onrender.com/v1").replace(/\/$/, "");
+    const modelId = input.modelId || "gemini-2.5-flash";
+    const body: Record<string, unknown> = {
+      model: modelId,
+      messages: [
+        ...(input.systemPrompt ? [{ role: "system", content: input.systemPrompt }] : []),
+        { role: "user", content: input.prompt },
+      ],
+      temperature: input.temperature ?? 0.7,
+    };
+    if (input.maxTokens) body.max_tokens = input.maxTokens;
+    if (input.jsonMode) {
+      body.response_format = { type: "json_object" };
+      body.temperature = input.temperature ?? 0.2;
+    }
+
+    const res = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      if (res.status === 401 || res.status === 403) throw new ProviderUnavailableError(`FreeLLMAPI ${res.status}: invalid or expired API key`);
+      if (res.status === 429) throw new ProviderUnavailableError(`FreeLLMAPI 429: rate limited`);
+      throw new ProviderUnavailableError(`FreeLLMAPI ${res.status}: ${detail.slice(0, 300)}`);
+    }
+    const json = await res.json();
+    const text = json?.choices?.[0]?.message?.content ?? "";
+    const usage = json?.usage;
+    const promptTokens = usage?.prompt_tokens || Math.ceil(input.prompt.length / 4);
+    const completionTokens = usage?.completion_tokens || Math.ceil(text.length / 4);
+    return {
+      text,
+      modelId,
+      provider: "freellmapi",
+      tokensUsed: promptTokens + completionTokens,
+      cost: estimateCost(0, promptTokens + completionTokens),
+    };
+  },
+};

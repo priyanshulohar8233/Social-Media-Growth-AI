@@ -12,7 +12,7 @@ export type Capability =
   | "transcription"
   | "audio";
 
-export type ProviderName = "openai" | "anthropic" | "local" | "huggingface" | "fal" | "comfyui" | "mock";
+export type ProviderName = "openai" | "anthropic" | "local" | "huggingface" | "fal" | "comfyui" | "freellmapi" | "mock";
 
 export type ModelPolicy = "LOCAL_ONLY" | "FREE_ONLY" | "APPROVED_PROVIDERS" | "BEST_AVAILABLE";
 

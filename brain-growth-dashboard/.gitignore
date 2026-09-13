@@ -42,3 +42,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# local dev database (SQLite) — never commit
+/prisma/dev.db
+/prisma/dev.db-journal

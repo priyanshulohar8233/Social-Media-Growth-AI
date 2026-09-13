@@ -17,14 +17,14 @@ const tabs = [
   { icon: Plug, label: "Integrations" },
 ];
 
-const PLATFORM_META: Record<string, { handle: string; emoji: string; connected: boolean }> = {
-  instagram: { handle: "@braingrow_hq", emoji: "📸", connected: true },
-  youtube: { handle: "BrainGrow HQ", emoji: "▶️", connected: true },
-  linkedin: { handle: "BrainGrow Inc.", emoji: "💼", connected: true },
-  twitter: { handle: "@braingrow", emoji: "🐦", connected: true },
-  facebook: { handle: "BrainGrow", emoji: "👥", connected: false },
-  tiktok: { handle: "@braingrow", emoji: "🎵", connected: false },
-};
+const PLATFORM_LIST = [
+  { platform: "instagram", emoji: "📸" },
+  { platform: "youtube", emoji: "▶️" },
+  { platform: "linkedin", emoji: "💼" },
+  { platform: "twitter", emoji: "🐦" },
+  { platform: "facebook", emoji: "👥" },
+  { platform: "tiktok", emoji: "🎵" },
+];
 
 export default function SettingsPage() {
   const { user, refresh: refreshAuth } = useAuth();
@@ -106,19 +106,17 @@ export default function SettingsPage() {
   };
 
   // Merge known platforms with DB state
-  const connectedAccounts = PLATFORM_META
-    ? Object.entries(PLATFORM_META).map(([platform, meta]) => {
-        const db = accounts.find((a) => a.platform === platform);
-        return {
-          name: platform.charAt(0).toUpperCase() + platform.slice(1),
-          platform,
-          handle: db?.handle ?? meta.handle,
-          connected: db ? db.status === "connected" : meta.connected,
-          emoji: meta.emoji,
-          followers: db?.followers ?? 0,
-        };
-      })
-    : [];
+  const connectedAccounts = PLATFORM_LIST.map(({ platform, emoji }) => {
+    const db = accounts.find((a) => a.platform === platform);
+    return {
+      name: platform.charAt(0).toUpperCase() + platform.slice(1),
+      platform,
+      handle: db?.handle ?? "Not connected",
+      connected: db ? db.status === "connected" : false,
+      emoji,
+      followers: db?.followers ?? 0,
+    };
+  });
 
   const initials = (user?.name || "U").split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase();
 
@@ -179,9 +177,16 @@ export default function SettingsPage() {
 
           {activeTab === "Integrations" && (
             <Card>
-              <div className="border-b border-line-2 p-5">
-                <h2 className="h3 text-ink">Connected accounts</h2>
-                <p className="mt-0.5 text-xs text-ink-3">Manage your linked social media accounts</p>
+              <div className="flex items-center justify-between border-b border-line-2 p-5">
+                <div>
+                  <h2 className="h3 text-ink">Connected accounts</h2>
+                  <p className="mt-0.5 text-xs text-ink-3">Manage your linked social media accounts</p>
+                </div>
+                <Button asChild variant="outline" size="sm">
+                  <a href="/dashboard/connections">
+                    <Plug className="mr-1.5 h-3.5 w-3.5" /> Manage connections
+                  </a>
+                </Button>
               </div>
               <div className="space-y-2 p-5">
                 {connectedAccounts.map((account) => (

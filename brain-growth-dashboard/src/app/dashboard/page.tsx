@@ -17,14 +17,13 @@ import { AudienceInsights } from "@/components/charts/audience-insights";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { CalendarDays, RefreshCw, Download } from "lucide-react";
+import { CalendarDays, RefreshCw } from "lucide-react";
 
 export default function DashboardPage() {
   const { currentCompany } = useCompany();
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const companyId = currentCompany?.id;
@@ -53,21 +52,6 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [companyId]);
-
-  const handleSeed = async () => {
-    if (!companyId) return;
-    setSeeding(true);
-    try {
-      await apiFetch(`/api/companies/${companyId}/seed`, { method: "POST" });
-      // reload dashboard
-      const res = await apiFetch(`/api/companies/${companyId}/dashboard`);
-      if (res.ok) setData(await res.json());
-    } catch {
-      // noop
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   // Loading skeleton
   if (loading || !companyId) {
@@ -105,14 +89,7 @@ export default function DashboardPage() {
         <PageHeader title="Dashboard" description="Your AI-powered growth dashboard." />
         <Card>
           <div className="py-16 text-center text-sm text-ink-3">
-            {error || "No data yet."}
-            {!data && (
-              <div className="mt-4 flex justify-center gap-2">
-                <Button onClick={handleSeed} disabled={seeding}>
-                  <Download className="mr-1.5 h-4 w-4" /> {seeding ? "Generating…" : "Generate demo data"}
-                </Button>
-              </div>
-            )}
+            {error || "No data yet. Connect your social media accounts to get started."}
           </div>
         </Card>
       </div>
@@ -139,9 +116,11 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           {!hasContent && (
-            <Button onClick={handleSeed} disabled={seeding} variant="outline" size="sm">
-              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${seeding ? "animate-spin" : ""}`} />
-              {seeding ? "Generating…" : "Seed data"}
+            <Button asChild variant="outline" size="sm">
+              <a href="/dashboard/connections">
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                Connect accounts
+              </a>
             </Button>
           )}
           <div className="flex items-center gap-2 rounded-lg border border-line-2 bg-surface px-3 py-2 text-xs text-ink-2">

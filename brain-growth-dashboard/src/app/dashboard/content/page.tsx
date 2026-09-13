@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
-import { Plus, Calendar, Heart, MessageCircle, X, Loader2 } from "lucide-react";
+import { Plus, Calendar, Heart, MessageCircle, X, Loader2, BarChart3, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCompany } from "@/lib/company-context";
 import { apiFetch } from "@/lib/api-client";
@@ -36,6 +36,11 @@ export default function ContentPage() {
     hook: "",
     cta: "",
   });
+  const [perfPost, setPerfPost] = useState<any | null>(null);
+  const [perfForm, setPerfForm] = useState({ views: "", likes: "", comments: "", shares: "", saves: "" });
+  const [perfSaving, setPerfSaving] = useState(false);
+  const [perfSaved, setPerfSaved] = useState(false);
+  const [perfError, setPerfError] = useState<string | null>(null);
 
   const load = async (cid: string) => {
     try {
@@ -105,6 +110,43 @@ export default function ContentPage() {
       </div>
     );
   }
+
+  const openPerf = (post: any) => {
+    setPerfPost(post);
+    setPerfForm({ views: "", likes: "", comments: "", shares: "", saves: "" });
+    setPerfSaved(false);
+    setPerfError(null);
+  };
+
+  const handleRecordPerformance = async () => {
+    if (!companyId || !perfPost) return;
+    setPerfSaving(true);
+    setPerfError(null);
+    try {
+      const r = await apiFetch(`/api/companies/${companyId}/content/${perfPost.id}/performance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          views: Number(perfForm.views) || 0,
+          likes: Number(perfForm.likes) || 0,
+          comments: Number(perfForm.comments) || 0,
+          shares: Number(perfForm.shares) || 0,
+          saves: Number(perfForm.saves) || 0,
+        }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        setPerfError(j.error || "Failed to record performance");
+      } else {
+        setPerfSaved(true);
+        await load(companyId);
+      }
+    } catch {
+      setPerfError("Network error");
+    } finally {
+      setPerfSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -209,9 +251,73 @@ export default function ContentPage() {
                   <span className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> {post.likes.toLocaleString()}</span>
                   <span className="flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" /> {post.comments}</span>
                 </div>
+                {["published", "approved"].includes(post.status) && (
+                  <Button variant="outline" size="sm" onClick={() => openPerf(post)}>
+                    <BarChart3 className="mr-1 h-3.5 w-3.5" /> Record
+                  </Button>
+                )}
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Record performance modal */}
+      {perfPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !perfSaving && setPerfPost(null)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-line-2 p-5">
+              <div>
+                <h2 className="h3 text-ink">Record performance</h2>
+                <p className="mt-0.5 line-clamp-1 text-xs text-ink-3">{perfPost.title}</p>
+              </div>
+              <button onClick={() => !perfSaving && setPerfPost(null)} className="rounded-md p-1 text-ink-3 hover:bg-sunken hover:text-ink" aria-label="Close">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-4 p-5">
+              {perfSaved ? (
+                <div className="flex flex-col items-center gap-3 py-6 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-success-500/15 text-success-600"><Check className="h-6 w-6" /></span>
+                  <p className="text-sm font-medium text-ink">Performance recorded!</p>
+                  <p className="text-xs text-ink-3">The brain is now learning from this post — next content will be smarter.</p>
+                  <Button onClick={() => setPerfPost(null)}>Done</Button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-ink-3">Enter the real numbers from your social platform. This feeds the brain so future content improves.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      ["views", "Views", "e.g. 12500"],
+                      ["likes", "Likes", "e.g. 840"],
+                      ["comments", "Comments", "e.g. 96"],
+                      ["shares", "Shares", "e.g. 210"],
+                      ["saves", "Saves", "e.g. 430"],
+                    ] as const).map(([key, label, ph]) => (
+                      <div key={key} className="space-y-1.5">
+                        <label className="label">{label}</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={perfForm[key]}
+                          onChange={(e) => setPerfForm({ ...perfForm, [key]: e.target.value })}
+                          placeholder={ph}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {perfError && <p className="text-xs text-danger-500">{perfError}</p>}
+                  <div className="flex gap-2 pt-1">
+                    <Button onClick={handleRecordPerformance} disabled={perfSaving} className="flex-1">
+                      {perfSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <BarChart3 className="mr-1.5 h-4 w-4" />}
+                      {perfSaving ? "Saving…" : "Save performance"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setPerfPost(null)} disabled={perfSaving}>Cancel</Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
         </div>
       )}
     </div>

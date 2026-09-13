@@ -31,10 +31,10 @@ interface AgentRun {
 }
 
 const WORKFLOWS = [
-  { id: "content-generation", label: "Content generation", desc: "Research → Strategy → Content → Review" },
+  { id: "content-generation", label: "Content generation", desc: "Research → Strategy → Content → Image/Video → Review" },
   { id: "research-only", label: "Research only", desc: "Trends, competitors, audience signals" },
   { id: "strategy-only", label: "Strategy", desc: "Research → positioning strategy" },
-  { id: "full-cycle", label: "Full cycle", desc: "Research → … → Analytics → Growth" },
+  { id: "full-cycle", label: "Full cycle", desc: "Research → Content → Image/Video → Review → Analytics → Growth" },
 ] as const;
 
 const RUN_STATUS: Record<string, string> = {

@@ -84,8 +84,6 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         // auto-select new company
         setCurrentCompanyState(json.company);
         localStorage.setItem("braingrow-company", json.company.id);
-        // auto-seed demo data in the background (non-blocking)
-        apiFetch(`/api/companies/${json.company.id}/seed`, { method: "POST" }).catch(() => {});
         return { success: true, company: json.company };
       }
       return { success: false, error: json.error || "Failed to create company" };

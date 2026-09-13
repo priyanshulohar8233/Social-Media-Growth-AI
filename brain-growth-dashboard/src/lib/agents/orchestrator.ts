@@ -4,17 +4,20 @@ import { sanitizePrompt } from "@/lib/harness";
 import { aiGenerate } from "@/lib/ai/gateway";
 import { logger } from "@/lib/logger";
 import type { AgentType } from "./types";
+import { AGENT_SKILLS, buildAgentSystemPrompt, buildAgentTaskPrompt } from "./skills";
 
 /**
  * Orchestrator — selects agents, enforces order, handles failures.
  * Flow: RESEARCH → STRATEGY → CONTENT → IMAGE/VIDEO → REVIEW → APPROVAL → PUBLISH → ANALYTICS → MEMORY
+ * Every agent now runs with an ultra-advanced, research-backed skill definition
+ * (expert system prompt + reasoning methodology + output schema + quality bar).
  */
 
 const WORKFLOWS: Record<string, AgentType[]> = {
-  "content-generation": ["RESEARCH", "STRATEGY", "CONTENT", "REVIEW"],
+  "content-generation": ["RESEARCH", "STRATEGY", "CONTENT", "IMAGE", "VIDEO", "REVIEW"],
   "research-only": ["RESEARCH"],
   "strategy-only": ["RESEARCH", "STRATEGY"],
-  "full-cycle": ["RESEARCH", "STRATEGY", "CONTENT", "REVIEW", "ANALYTICS", "GROWTH"],
+  "full-cycle": ["RESEARCH", "STRATEGY", "CONTENT", "IMAGE", "VIDEO", "REVIEW", "ANALYTICS", "GROWTH"],
 };
 
 export async function runOrchestrator(params: {
@@ -42,8 +45,9 @@ export async function runOrchestrator(params: {
 
   for (const agentType of workflow) {
     try {
-      const systemPrompt = `You are the ${agentType} agent for company ${params.companyId}. Company context:\n${brainPrompt}\nRespond with structured JSON when possible.`;
-      const prompt = `Task: ${sanitizedInput}\nPrevious outputs: ${JSON.stringify(outputs).slice(0, 4000)}\nProduce output for ${agentType} phase.`;
+      const skill = AGENT_SKILLS[agentType];
+      const systemPrompt = buildAgentSystemPrompt(agentType, skill, brainPrompt, params.companyId);
+      const prompt = buildAgentTaskPrompt(agentType, skill, sanitizedInput, outputs);
 
       // Create task record
       const task = await prisma.agentTask.create({
@@ -64,10 +68,11 @@ export async function runOrchestrator(params: {
       });
       const text = llm.text;
 
-      // Use the REAL LLM structured output when it parses; otherwise project the
-      // deterministic fallback (explicitly labeled) — the LLM text is never wasted.
+      // Use the REAL LLM structured output when it parses and validates against
+      // the agent's schema; otherwise project the deterministic fallback
+      // (explicitly labeled) — the LLM text is never wasted.
       const parsed = tryJSON(text);
-      const structured = parsed
+      const structured = parsed && validateAgainstSchema(parsed, skill.outputSchema)
           ? { ...parsed, _model: `${llm.modelId}@${llm.provider}`, _fallback: llm.fallbackUsed ? "fallback" : "primary" }
           : { ...mockAgentOutput(agentType, params.input, brain), _model: null, _fallback: "deterministic-fallback" };
       outputs[agentType] = structured;
@@ -108,6 +113,27 @@ function tryJSON(text: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Lightweight schema validation — checks that all required keys exist and that
+ * enum/array/object shapes are respected. Returns true when the parsed output
+ * is structurally usable for the agent's contract.
+ */
+function validateAgainstSchema(output: Record<string, unknown>, schema: Record<string, unknown>): boolean {
+  const props = (schema.properties as Record<string, { type?: string; required?: string[] }>) || {};
+  const required = (schema.required as string[]) || [];
+  for (const key of required) {
+    if (output[key] === undefined || output[key] === null) return false;
+    const def = props[key];
+    if (!def) continue;
+    if (def.type === "array" && !Array.isArray(output[key])) return false;
+    if (def.type === "object" && (typeof output[key] !== "object" || Array.isArray(output[key]))) return false;
+    if (def.type === "number" && typeof output[key] !== "number") return false;
+    if (def.type === "string" && typeof output[key] !== "string") return false;
+    if (def.type === "boolean" && typeof output[key] !== "boolean") return false;
+  }
+  return true;
 }
 
 function mockAgentOutput(agentType: string, input: string, brain: ReturnType<typeof buildBrainContext> extends Promise<infer T> ? T : never): Record<string, unknown> {
@@ -210,6 +236,37 @@ function mockAgentOutput(agentType: string, input: string, brain: ReturnType<typ
             required_approval: true,
             suggested_next_step: "Create calendar items",
           };
+    case "IMAGE":
+      return {
+        platform: "Instagram",
+        format: "1080x1350 portrait",
+        composition: "Focal point center-left, generous negative space top for text overlay",
+        color_palette: ["brand primary", "brand accent", "neutral background"],
+        typography: "Bold condensed headline, 2-line max, high contrast",
+        text_overlay: base.slice(0, 40),
+        mood: "Clean, confident, scroll-stopping",
+        accessibility: "WCAG AA contrast, text within safe zones",
+        image_prompt: `Professional social media visual for: ${base}, brand-aware, mobile-first`,
+      };
+    case "VIDEO":
+      return {
+        platform: "Instagram",
+        format: "9:16 vertical, 15-30s",
+        hook_shot: `2-sec hook: "${base.slice(0, 30)}..."`,
+        hook_text_overlay: base.slice(0, 30),
+        shots: [
+          { visual: "Hook close-up", action: "Direct address", text_overlay: base.slice(0, 30), duration_sec: 2 },
+          { visual: "Value sequence", action: "Fast cuts", text_overlay: "Key point", duration_sec: 8 },
+          { visual: "Payoff", action: "Reveal result", text_overlay: "Result", duration_sec: 4 },
+          { visual: "CTA", action: "On-screen CTA", text_overlay: "Follow/comment", duration_sec: 3 },
+        ],
+        pacing: "Fast cuts with pattern interrupts every 3-4s",
+        payoff: "Clear result or insight that rewards the watch",
+        cta_placement: "End screen + mid-roll text",
+        captions: "Full burned-in captions for sound-off viewing",
+        music_direction: "Trending upbeat track, low volume under voiceover",
+        video_prompt: `Short-form vertical video for: ${base}, hook-first, captioned`,
+      };
     default:
       return { result: `Mock output for ${agentType}: ${base}` };
   }
