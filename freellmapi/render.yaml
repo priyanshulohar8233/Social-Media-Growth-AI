@@ -1,0 +1,34 @@
+# Render.com blueprint — deploy FreeLLMAPI as a Docker Web Service.
+# 1. Push this repo to GitHub and connect it in Render dashboard.
+# 2. This file creates the service automatically ("Blueprint" from repo root).
+#    - SQLite data is stored on a persistent disk at /app/server/data.
+#    - The server listens on 0.0.0.0 so Render can route traffic to it.
+
+services:
+  - type: web
+    name: freellmapi
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/ping
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: HOST
+        value: 0.0.0.0
+      - key: FREELLMAPI_INSTALL_METHOD
+        value: render
+      # Server encryption key for API key storage — generate with:
+      #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      # Replace the generated value with a 64-char hex string if needed.
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      # Optional: set your provider API keys here (or via the dashboard).
+      # - key: OPENAI_API_KEY
+      #   sync: false
+    disk:
+      name: freellmapi-data
+      mountPath: /app/server/data
+      sizeGB: 1

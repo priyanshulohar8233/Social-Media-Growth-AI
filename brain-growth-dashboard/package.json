@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "test:auth": "node scripts/auth-flow-test.mjs",
     "test:creator": "node scripts/e2e-creator-flow.mjs",
     "test:dashboard": "node scripts/e2e-dashboard-features.mjs",

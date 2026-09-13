@@ -73,9 +73,16 @@ npm run test:brain      # brain + war room (48/48)
 npm run worker          # background job worker
 ```
 
-### ☁️ Deployment (BrainGrow)
+### ☁️ Deployment (BrainGrow → Vercel)
 
-A [Render blueprint](brain-growth-dashboard/render.yaml) is included — push the repo to GitHub, connect it in Render, and the service is created automatically (SQLite on a persistent disk at `/data`; switch `DATABASE_URL` to Postgres for scale-out).
+The app is Vercel-ready:
+
+- **Database:** Postgres required (SQLite was replaced for serverless). Use a free hosted Postgres — [Neon](https://neon.tech), [Supabase](https://supabase.com), or Vercel Postgres — and set `DATABASE_URL`.
+- **Build:** `vercel-build` script runs `prisma generate && prisma migrate deploy && next build` (see `vercel.json`).
+- **Background jobs:** a Vercel Cron Job (`*/5 * * * *`) calls `/api/cron/process-jobs` to drain the generation queue. Set `CRON_SECRET` in the Vercel dashboard.
+- **Storage:** media/documents are stored by URL reference, so no blob storage is required today. If you add real file uploads, use [Vercel Blob](https://vercel.com/docs/storage/vercel-blob).
+
+Required env vars in Vercel: `DATABASE_URL`, `JWT_SECRET`, `NEXT_PUBLIC_APP_URL`, `CRON_SECRET` (plus `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for OAuth).
 
 ---
 
@@ -112,6 +119,10 @@ npm run dev
 ```
 
 Runs the server + client together. See [`freellmapi/README.md`](freellmapi/README.md) and [`freellmapi/docs/install.md`](freellmapi/docs/install.md) for full setup, Docker, and deployment instructions.
+
+### ☁️ Deployment (FreeLLMAPI → Render)
+
+A [Render blueprint](freellmapi/render.yaml) is included — it deploys the existing `Dockerfile` as a web service with a persistent disk for the SQLite data at `/app/server/data`. Set `ENCRYPTION_KEY` (64-char hex) and your provider API keys in the Render dashboard.
 
 ---
 
