@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || "http://localhost:8080/api/auth/callback/google";
+  const baseUrl = new URL(request.url).origin;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${baseUrl}/api/auth/callback/google`;
 
   // Dev fallback: if no real credentials, use mock Google user (so button still works without setup)
   if (!clientId) {
-    // Mock behavior — redirect to mock handler that creates a demo Google user via existing login route logic
-    // We do a server-side mock: create/find mock Google user and set cookie, then redirect
-    // To keep it simple, redirect to a special mock endpoint that the login page's old mock used
-    // For now, just redirect with flag so frontend can fallback to mock loginWithProvider
-    return NextResponse.redirect(new URL("/?google_mock=1", "http://localhost:8080"));
+    // Mock behavior — redirect with flag so frontend can fallback to mock loginWithProvider
+    return NextResponse.redirect(new URL("/?google_mock=1", baseUrl));
   }
 
   const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
