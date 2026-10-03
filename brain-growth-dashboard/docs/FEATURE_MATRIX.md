@@ -182,7 +182,7 @@ New capabilities beyond the original 78, each verified by `scripts/e2e-moat.mjs`
 | P4-2 | Predictive growth score | EXISTS — WORKING | `/growth` `prediction` (viralityScore/bestTime/forecastReach, nulls without data) + UI card; moat suite |
 | P4-3 | Inbox crisis alerts + auto-draft | EXISTS — WORKING | `src/lib/intelligence/crisis.ts`, `/inbox/alerts` GET/POST, inbox UI spike banner; closes former gap F64 (now WORKING) |
 | P4-4 | Usage saved-$ metric | EXISTS — WORKING | `/usage` `savings` block (reference $0.003/1k, per-provider breakdown); moat suite |
-| P1-5 | Postgres + pgvector cutover | BLOCKED BY EXTERNAL PROVIDER | No Postgres server in env; migration history already targets postgres; needs server + data migration |
+| P1-5 | Postgres cutover (hosted Neon, dedicated `braingrow` database) | EXISTS — WORKING | 2026-10-03: Neon DB created, 57 tables via `migrate deploy` (init + delta, additive only); `DATABASE_URL` + `JWT_SECRET` + `ENCRYPTION_SECRET` + `CRON_SECRET` live in Vercel env only; local SQLite fully removed (backup retained outside repo); production deployment Ready + health `db:up`; onboarding 34/34 + moat 31/31 verified live |
 | P1-6 | Refresh-token rotation + CSRF hardening | MISSING (deferred) | Breaking auth change on a green auth system; rate limits shipped instead; needs dedicated auth migration |
 | P1-7 | Inngest/Trigger.dev + Upstash | BLOCKED BY EXTERNAL PROVIDER | External SaaS accounts required; cron route + in-memory limiter are the working substitutes |
 | P4-5 | Official platform OAuth publishing | BLOCKED BY EXTERNAL PROVIDER | Needs platform app keys + review; manual linking + scheduled queue are the working substitutes |

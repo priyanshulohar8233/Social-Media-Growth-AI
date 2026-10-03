@@ -82,3 +82,18 @@ dashboard 46/46, ops 43/43, brain 48/48, moat 31/31, creator clean.
 
 Item 24(a) is now done (F64 WORKING). Still blocked: live LLM keys, platform
 OAuth app keys, Postgres server, video provider, Upstash/Inngest accounts.
+
+## Addendum 2 — Online-only cutover (2026-10-03, per instruction "nothing local")
+
+- Local SQLite deleted (backup retained outside the repo); local portable Postgres
+  stood up only as a migration bridge, then fully removed (server, binaries, data).
+- New Neon Postgres database `braingrow` (isolated from other projects on the
+  same cluster); 57 tables via production-path `migrate deploy`.
+- All secrets moved to Vercel env only: `DATABASE_URL`, `JWT_SECRET` (production
+  was on a hardcoded dev fallback — closed), `ENCRYPTION_SECRET` (new; makes
+  at-rest encryption deterministic), `CRON_SECRET` (rotated to clean alphanumeric;
+  old value had backslash-escaping issues), Google OAuth keys. Local `.env` holds
+  zero secrets. RESEND_API_KEY still absent (verification emails don't send in prod).
+- Production deployment Ready; `/api/health` live: `db:up`. E2E verified against
+  production: onboarding 34/34, moat 31/31 (incl. GEO, MCP, crisis, savings, cron
+  drain). Prod DB left pristine (0 users/companies/audit rows after cleanup).
