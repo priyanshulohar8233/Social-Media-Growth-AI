@@ -13,7 +13,14 @@ import { SignJWT } from "jose";
 import { PrismaClient } from "@prisma/client";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const BASE = "http://localhost:8080";
+const BASE = process.env.BASE_URL || "http://localhost:8080";
+const PROTECTION_BYPASS = process.env.PROTECTION_BYPASS || "";
+
+/** Append the Vercel protection bypass token when running against production. */
+function withBypass(pathname) {
+  if (!PROTECTION_BYPASS) return pathname;
+  return `${pathname}${pathname.includes("?") ? "&" : "?"}x-vercel-protection-bypass=${PROTECTION_BYPASS}`;
+}
 
 const env = {};
 for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
@@ -37,7 +44,7 @@ function signStale(payload) {
 }
 
 async function req(pathname, init = {}) {
-  const res = await fetch(`${BASE}${pathname}`, init);
+  const res = await fetch(`${BASE}${withBypass(pathname)}`, init);
   let json = null;
   try { json = await res.json(); } catch {}
   return { status: res.status, json, setCookie: res.headers.getSetCookie?.() ?? [] };

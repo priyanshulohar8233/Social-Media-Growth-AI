@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
-import { decryptToken } from "../src/lib/crypto.ts";
+import nodeCrypto from "node:crypto";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = process.env.PORT || "8080";
@@ -22,6 +22,40 @@ const env = {};
 for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+}
+
+/**
+ * Local mirror of src/lib/crypto.ts decryption. The suite is plain Node ESM and
+ * cannot import app TypeScript directly, so the AES-256-GCM format
+ * (ivHex:authTagHex:encryptedHex) is reimplemented here and keyed from the same
+ * env values the server uses. Control characters are stripped to match the
+ * server's env sanitising so a pasted secret still decrypts here.
+ */
+function encryptionSecret() {
+  const clean = (v) => (v || "").replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  return clean(process.env.ENCRYPTION_SECRET || env.ENCRYPTION_SECRET) ||
+    clean(process.env.JWT_SECRET || env.JWT_SECRET) ||
+    "dev-encryption-secret-braingrow-32chars-min";
+}
+
+function decryptToken(cipherText) {
+  if (!cipherText) return cipherText;
+  const parts = cipherText.split(":");
+  if (parts.length !== 3) return cipherText;
+  try {
+    const key = nodeCrypto.createHash("sha256").update(encryptionSecret()).digest();
+    const [ivHex, authTagHex, encryptedHex] = parts;
+    const decipher = nodeCrypto.createDecipheriv(
+      "aes-256-gcm",
+      key,
+      Buffer.from(ivHex, "hex")
+    );
+    decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
+    return decipher.update(encryptedHex, "hex", "utf8") + decipher.final("utf8");
+  } catch (err) {
+    console.error("[crypto] Decryption failed:", err.message);
+    return "";
+  }
 }
 
 const DATABASE_URL = process.env.DATABASE_URL || env.DATABASE_URL;

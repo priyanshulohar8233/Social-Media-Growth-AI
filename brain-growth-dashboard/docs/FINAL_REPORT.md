@@ -93,7 +93,70 @@ OAuth app keys, Postgres server, video provider, Upstash/Inngest accounts.
   was on a hardcoded dev fallback — closed), `ENCRYPTION_SECRET` (new; makes
   at-rest encryption deterministic), `CRON_SECRET` (rotated to clean alphanumeric;
   old value had backslash-escaping issues), Google OAuth keys. Local `.env` holds
-  zero secrets. RESEND_API_KEY still absent (verification emails don't send in prod).
+  zero secrets. `RESEND_API_KEY` still absent — verification emails therefore do
+  not send in prod; the UI and API now say so explicitly instead of claiming
+  success (see Addendum 3).
 - Production deployment Ready; `/api/health` live: `db:up`. E2E verified against
   production: onboarding 34/34, moat 31/31 (incl. GEO, MCP, crisis, savings, cron
   drain). Prod DB left pristine (0 users/companies/audit rows after cleanup).
+
+## Addendum 3 — Env-value corruption fixed (2026-10-03)
+
+Root cause found while wiring the last two external services: several production
+env values carried a trailing CRLF (`NEXT_PUBLIC_APP_URL`,
+`FREELLMAPI_BASE_URL`, `FREELLMAPI_API_KEY`, `GOOGLE_CLIENT_ID/SECRET`,
+`FREELLMAPI_API_KEY` — everything written through the Vercel API in an earlier
+pass). Consequences, all real and all now fixed:
+
+1. `FREELLMAPI_BASE_URL` became `https://…/v1\r\n`; the old code only stripped a
+   trailing `/`, so every request URL was invalid and **all AI calls silently
+   degraded to the mock adapter**. `.replace(/\/$/, "")` never matched.
+2. Verification and OAuth links were built from the same polluted
+   `NEXT_PUBLIC_APP_URL`, producing links containing raw CR/LF.
+3. `CRON_SECRET` had 2 backslashes, so the header comparison failed → cron drain
+   returned 401. (Also rotated to clean alphanumeric.)
+
+Fixes:
+
+- New `src/lib/env.ts` (`envStr`, `envHas`, `appBaseUrl`, `trimTrailingSlash`)
+  strips control characters, trims, unwraps quotes, and validates the app URL
+  scheme. All server-side env reads go through it: providers, email, auth-server,
+  crypto, health, cron, jobs/process, social connect/callback, Google OAuth.
+- `appBaseUrl` prefers `NEXT_PUBLIC_APP_URL` and falls back to the request origin
+  only when unset/invalid, so a malformed value can never poison a redirect URI.
+- Values re-normalised in Vercel env; `EMAIL_FROM=noreply@resend.dev` added.
+- Honest email reporting: `sendVerificationEmail` now returns
+  `delivered`/`transport`; register + resend-verification pass it through; the
+  verify-email page shows an "email provider not configured" panel with the
+  logged link instead of falsely claiming a message was sent.
+- `tests/unit/env.test.ts` (14 cases) pins the CRLF corruption, quote/whitespace
+  stripping, and appBaseUrl scheme/path handling.
+- All e2e suites now accept `BASE_URL` + `PROTECTION_BYPASS` and run against the
+  live deployment. The onboarding suite reimplements AES-256-GCM decryption
+  locally (plain Node ESM cannot import app TS).
+
+Online verification against `brain-growth-dashboard.vercel.app`:
+
+| Suite | Result |
+| --- | --- |
+| test:unit | 63/63 |
+| test:auth | 29/29 |
+| test:creator | pass |
+| test:dashboard | 46/46 |
+| test:ops | 43/43 |
+| test:brain | 48/48 |
+| test:onboarding | 34/34 |
+| test:moat | 31/31 |
+
+Confirmed live: verification link generated and consumed (200), Google OAuth
+redirects to accounts.google.com with a clean
+`redirect_uri=https://brain-growth-dashboard.vercel.app/api/auth/callback/google`,
+unauth guard 401, prod DB returned to 0 rows.
+
+Known external outage (not a code defect): the FreeLLMAPI gateway at
+`freellmapi.onrender.com` returns 502 `Provider error (Qwen3 235B): Cerebras API
+error 404` for every model, including ones it advertises in `/models`. Key auth is
+fine (`/models` → 200). Real inference therefore remains unavailable and the app
+correctly falls back to mock, which is labelled `[MOCK:TEXT]` in output. Fix needs
+either a working upstream model on that gateway or an `OPENAI_API_KEY` /
+`ANTHROPIC_API_KEY`.

@@ -15,7 +15,14 @@ import { PrismaClient } from "@prisma/client";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = process.env.PORT || "8080";
-const BASE = `http://localhost:${PORT}`;
+const BASE = process.env.BASE_URL || `http://localhost:${PORT}`;
+const PROTECTION_BYPASS = process.env.PROTECTION_BYPASS || "";
+
+/** Append the Vercel protection bypass token when running against production. */
+function withBypass(pathname) {
+  if (!PROTECTION_BYPASS) return pathname;
+  return `${pathname}${pathname.includes("?") ? "&" : "?"}x-vercel-protection-bypass=${PROTECTION_BYPASS}`;
+}
 
 const env = {};
 for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
@@ -52,7 +59,7 @@ async function api(pathname, { method = "GET", token, cookie, body } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (cookie) headers.Cookie = cookie;
-  const res = await fetch(`${BASE}${pathname}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const res = await fetch(`${BASE}${withBypass(pathname)}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
   let json = null;
   try {
     json = await res.json();

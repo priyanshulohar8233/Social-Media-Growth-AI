@@ -4,7 +4,8 @@ import * as https from "https";
 import * as http from "http";
 
 const PORT = process.env.PORT || 8080;
-const BASE = `http://localhost:${PORT}`;
+const BASE = process.env.BASE_URL || `http://localhost:${PORT}`;
+const PROTECTION_BYPASS = process.env.PROTECTION_BYPASS || "";
 const prisma = new PrismaClient();
 
 function loadEnv() {
@@ -41,7 +42,7 @@ function ok(cond, msg) {
 
 function request(path, { method = "GET", body, headers = {} } = {}) {
   return new Promise((resolve, reject) => {
-    const url = `${BASE}${path}`;
+    const url = `${BASE}${path}` + (PROTECTION_BYPASS ? `${path.includes("?") ? "&" : "?"}x-vercel-protection-bypass=${PROTECTION_BYPASS}` : "");
     const data = body ? JSON.stringify(body) : null;
     const h = { ...(data ? { "Content-Type": "application/json" } : {}), ...headers };
     if (data) h["Content-Length"] = Buffer.byteLength(data);
