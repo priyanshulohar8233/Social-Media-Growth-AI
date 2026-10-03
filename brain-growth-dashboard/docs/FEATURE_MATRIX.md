@@ -160,3 +160,30 @@ Test suites (run against `http://localhost:8080`, `npm run test:*`):
 
 **Cold-blockers:** live LLM inference (needs OpenAI/Anthropic keys), image/video generation (needs fal/comfyui),
 social publishing + listening (needs platform APIs). All such paths are explicitly labeled and never faked.
+
+---
+
+## Supplement — Improvement-plan phases 0–4 (implemented 2026-10-03)
+
+New capabilities beyond the original 78, each verified by `scripts/e2e-moat.mjs`
+(31/31) or `npm run test:unit` unless noted.
+
+| ID | Feature | Status | Evidence |
+|----|---------|--------|----------|
+| P0-1 | FreeLLMAPI gateway wiring (real → FreeLLMAPI → labeled mock, per-attempt AiUsage) | EXISTS — WORKING | `src/lib/providers/http.ts` `freellmapiLLM`; gateway `LLM_ADAPTERS`; registry enables on `FREELLMAPI_API_KEY`; live calls still BLOCKED (no key in env) |
+| P0-2 | De-vendored freellmapi coupling | EXISTS — WORKING | Zero code imports of sibling `freellmapi/` tree (HTTP-only); directory retained (hosts the live service) |
+| P1-1 | CRON-guarded job drain | EXISTS — WORKING | `POST|GET /api/cron/process-jobs` + `CRON_SECRET`; same claim/reclaim processor; moat suite covers 401/503/200 |
+| P1-2 | Extended health (DB, queue depth, provider presence) | EXISTS — WORKING | `/api/health` `checks` block; secrets never exposed (booleans only) |
+| P1-3 | Auth rate limiting | EXISTS — WORKING | `src/lib/rate-limit.ts` on login/register/verify/resend; `tests/unit/rate-limit.test.ts` |
+| P1-4 | Vitest unit suite | EXISTS — WORKING | `npm run test:unit` 45/45 (confidence, threat, intent, rate-limit, golden sets) |
+| P2-1 | GEO share-of-voice tracker | EXISTS — WORKING | `GeoVisibility` model + `src/lib/geo/tracker.ts`; `POST|GET /competitors/geo`; fused into `WarRoomReport`; UI card; moat suite |
+| P3-1 | Memory-flywheel eval + benchmarks | EXISTS — WORKING | `eval/golden/*.json`, `tests/unit/golden.test.ts`, `scripts/eval-brain.mjs`, `docs/BENCHMARKS.md` (measured numbers) |
+| P4-1 | MCP tool endpoint | EXISTS — WORKING | `/api/mcp` (createContent, getAnalytics, warRoomReport, publishPost-as-scheduled-draft with `live:false`); membership + audit; moat suite |
+| P4-2 | Predictive growth score | EXISTS — WORKING | `/growth` `prediction` (viralityScore/bestTime/forecastReach, nulls without data) + UI card; moat suite |
+| P4-3 | Inbox crisis alerts + auto-draft | EXISTS — WORKING | `src/lib/intelligence/crisis.ts`, `/inbox/alerts` GET/POST, inbox UI spike banner; closes former gap F64 (now WORKING) |
+| P4-4 | Usage saved-$ metric | EXISTS — WORKING | `/usage` `savings` block (reference $0.003/1k, per-provider breakdown); moat suite |
+| P1-5 | Postgres + pgvector cutover | BLOCKED BY EXTERNAL PROVIDER | No Postgres server in env; migration history already targets postgres; needs server + data migration |
+| P1-6 | Refresh-token rotation + CSRF hardening | MISSING (deferred) | Breaking auth change on a green auth system; rate limits shipped instead; needs dedicated auth migration |
+| P1-7 | Inngest/Trigger.dev + Upstash | BLOCKED BY EXTERNAL PROVIDER | External SaaS accounts required; cron route + in-memory limiter are the working substitutes |
+| P4-5 | Official platform OAuth publishing | BLOCKED BY EXTERNAL PROVIDER | Needs platform app keys + review; manual linking + scheduled queue are the working substitutes |
+| P4-6 | AI video studio + white-label/SOC2 | MISSING/BLOCKED | Needs media provider (fal/comfyui); compliance is process work, not code |

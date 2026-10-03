@@ -7,25 +7,38 @@ import { useCompany } from "@/lib/company-context";
 import { Loader2 } from "lucide-react";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { companies, loading: companyLoading } = useCompany();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push("/");
+      router.push("/login");
+      return;
     }
-  }, [isAuthenticated, authLoading, router]);
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && !companyLoading) {
-      // If user has no company, redirect to onboarding (except if already there)
-      if (companies.length === 0 && pathname !== "/onboarding") {
-        router.push("/onboarding");
+    if (!authLoading && isAuthenticated && user) {
+      // 1. If email is not verified, redirect to /verify-email
+      if (user.emailVerified === false && !pathname.startsWith("/verify-email")) {
+        router.push("/verify-email");
+        return;
+      }
+
+      // 2. If onboarding is not completed, route to current onboarding step
+      if (user.emailVerified && !user.onboardingCompleted && !pathname.startsWith("/onboarding")) {
+        const step = user.onboardingStep;
+        if (step === "BRAND_DETAILS") {
+          router.push("/onboarding/brand-details");
+        } else if (step === "TOUR") {
+          router.push("/onboarding/tour");
+        } else {
+          router.push("/onboarding/social-connect");
+        }
+        return;
       }
     }
-  }, [isAuthenticated, authLoading, companyLoading, companies, pathname, router]);
+  }, [isAuthenticated, authLoading, user, pathname, router]);
 
   if (authLoading || (isAuthenticated && companyLoading)) {
     return (
@@ -39,9 +52,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) return null;
-
-  // If authenticated but no company and not on onboarding, show loader while redirecting
-  if (companies.length === 0 && pathname !== "/onboarding") return null;
+  if (user?.emailVerified === false && !pathname.startsWith("/verify-email")) return null;
 
   return <>{children}</>;
 }

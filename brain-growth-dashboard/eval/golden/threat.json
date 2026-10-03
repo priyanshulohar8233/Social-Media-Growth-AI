@@ -1,0 +1,10 @@
+[
+  { "score": 96, "label": "Critical" },
+  { "score": 75, "label": "Critical" },
+  { "score": 74, "label": "High" },
+  { "score": 55, "label": "High" },
+  { "score": 54, "label": "Moderate" },
+  { "score": 38, "label": "Moderate" },
+  { "score": 37, "label": "Low" },
+  { "score": 6, "label": "Low" }
+]

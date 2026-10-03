@@ -1,15 +1,69 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
-  name: z.string().min(2).max(100),
-  email: z.string().email(),
-  password: z.string().min(6).max(100),
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
+  email: z.string().trim().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters").max(100),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().trim().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
 });
+
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Verification token is required"),
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.string().trim().email("Please enter a valid email address").optional(),
+});
+
+export const socialManualConnectSchema = z
+  .object({
+    platform: z.string().trim().min(1, "Platform is required").max(50),
+    action: z.enum(["connect", "disconnect"]),
+    handle: z.string().trim().min(1, "Handle is required to link an account").max(100).optional(),
+    displayName: z.string().trim().max(100).optional().or(z.literal("")),
+    accessToken: z.string().max(2000).optional().or(z.literal("")),
+    refreshToken: z.string().max(2000).optional().or(z.literal("")),
+    scopes: z.string().trim().max(500).optional().or(z.literal("")),
+  })
+  .refine(
+    (d) => d.action === "disconnect" || (d.handle !== undefined && d.handle.trim().length > 0),
+    {
+      message: "Handle is required to link an account",
+      path: ["handle"],
+    }
+  );
+
+export const brandDetailsSchema = z
+  .object({
+    businessType: z.enum(["Individual", "Company"], {
+      message: "Business Type must be either Individual or Company",
+    }),
+    industry: z.string().trim().max(100).optional().or(z.literal("")),
+    contentType: z.string().trim().min(1, "Content Type is required").max(100),
+    goal: z.string().trim().min(1, "Primary Goal is required").max(100),
+    website: z
+      .string()
+      .trim()
+      .url("Please enter a valid URL (e.g. https://example.com)")
+      .optional()
+      .or(z.literal("")),
+  })
+  .refine(
+    (data) => {
+      if (data.businessType === "Company") {
+        return Boolean(data.industry && data.industry.trim().length > 0);
+      }
+      return true;
+    },
+    {
+      message: "Industry is required when Business Type is Company",
+      path: ["industry"],
+    }
+  );
 
 export const createCompanySchema = z.object({
   name: z.string().min(2).max(100),

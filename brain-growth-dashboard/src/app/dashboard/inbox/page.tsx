@@ -52,6 +52,7 @@ export default function InboxPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [reply, setReply] = useState("");
+  const [crisis, setCrisis] = useState<{ alert: boolean; negatives: number; windowMin: number; threshold: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!companyId) return;
@@ -63,6 +64,11 @@ export default function InboxPage() {
         const data = await res.json();
         setMessages(data.messages || []);
         setCounts(data.counts || {});
+      }
+      const alerts = await apiFetch(`/api/companies/${companyId}/inbox/alerts`);
+      if (alerts.ok) {
+        const data = await alerts.json();
+        setCrisis(data.crisis || null);
       }
     } finally {
       setLoading(false);
@@ -121,6 +127,15 @@ export default function InboxPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Social inbox" description="Comments, mentions and DMs from your platforms — with ai-assisted replies." />
+
+      {crisis?.alert && (
+        <Card className="border-danger-500/30 bg-danger-500/10 p-4">
+          <p className="text-sm font-semibold text-danger-500">
+            Spike alert: {crisis.negatives} negative messages in the last {crisis.windowMin} min (threshold {crisis.threshold}).
+          </p>
+          <p className="mt-0.5 text-xs text-ink-2">Review them below and reply or escalate before it spreads.</p>
+        </Card>
+      )}
 
       {/* Demo intake: without live platform APIs you can add a message to see the full flow */}
       <Composer companyId={companyId} onCreated={load} />

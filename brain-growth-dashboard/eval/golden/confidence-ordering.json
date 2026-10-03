@@ -1,0 +1,20 @@
+[
+  {
+    "name": "evidence-grows-confidence",
+    "a": { "type": "INFERENCE", "evidenceCount": 1, "sampleSize": 1, "ageDays": 0, "lastReinforcedDays": 0 },
+    "b": { "type": "INFERENCE", "evidenceCount": 4, "sampleSize": 1, "ageDays": 0, "lastReinforcedDays": 0 },
+    "higher": "b"
+  },
+  {
+    "name": "fresh-beats-stale",
+    "a": { "type": "OBSERVATION", "evidenceCount": 2, "sampleSize": 3, "ageDays": 0, "lastReinforcedDays": 60 },
+    "b": { "type": "OBSERVATION", "evidenceCount": 2, "sampleSize": 3, "ageDays": 0, "lastReinforcedDays": 0 },
+    "higher": "b"
+  },
+  {
+    "name": "facts-outrank-predictions",
+    "a": { "type": "PREDICTION", "evidenceCount": 1, "sampleSize": 1, "ageDays": 0, "lastReinforcedDays": 0 },
+    "b": { "type": "FACT", "evidenceCount": 1, "sampleSize": 1, "ageDays": 0, "lastReinforcedDays": 0 },
+    "higher": "b"
+  }
+]

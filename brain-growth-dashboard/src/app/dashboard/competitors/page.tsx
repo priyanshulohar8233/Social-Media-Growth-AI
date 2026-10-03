@@ -49,6 +49,14 @@ interface WarReport {
   totalCompetitors: number;
   avgThreat: number;
   topGapTopics: string[];
+  geoShareOfVoice: number | null;
+  geoCoverage: {
+    share: number | null;
+    total: number;
+    mentioned: number;
+    bySet: Array<{ set: string; total: number; mentioned: number }>;
+    provider: string | null;
+  } | null;
 }
 
 const THREAT_TONE: Record<string, string> = {
@@ -73,6 +81,7 @@ export default function CompetitorsPage() {
 
   const [war, setWar] = useState<WarReport | null>(null);
   const [warLoading, setWarLoading] = useState(true);
+  const [geoSweeping, setGeoSweeping] = useState(false);
 
   const loadWar = useCallback(async () => {
     if (!companyId) return;
@@ -87,6 +96,17 @@ export default function CompetitorsPage() {
   useEffect(() => {
     loadWar();
   }, [loadWar]);
+
+  const runGeoSweep = async () => {
+    if (!companyId || geoSweeping) return;
+    setGeoSweeping(true);
+    try {
+      const res = await apiFetch(`/api/companies/${companyId}/competitors/geo`, { method: "POST" });
+      if (res.ok) await loadWar();
+    } finally {
+      setGeoSweeping(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!companyId) return;
@@ -224,6 +244,40 @@ export default function CompetitorsPage() {
                 </div>
               </Card>
             </div>
+
+            {/* AI-search (GEO) share-of-voice, fused with social threat */}
+            <Card className="mb-4 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="caption text-ink-3">AI-search share-of-voice</p>
+                  {war.geoShareOfVoice === null || war.geoShareOfVoice === undefined ? (
+                    <p className="mt-1 text-sm text-ink-3">No GEO sweep yet — run one to see how AI answers mention your brand.</p>
+                  ) : (
+                    <p className="metric text-ink">{war.geoShareOfVoice}<span className="text-sm text-ink-3">% mentioned</span></p>
+                  )}
+                </div>
+                <Button variant="outline" size="sm" onClick={runGeoSweep} disabled={geoSweeping} className="shrink-0">
+                  {geoSweeping ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Radar className="mr-1.5 h-3.5 w-3.5" />}
+                  {geoSweeping ? "Sweeping…" : "Run GEO sweep"}
+                </Button>
+              </div>
+              {war.geoCoverage && war.geoCoverage.bySet.length > 0 && (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {war.geoCoverage.bySet.map((s) => (
+                    <div key={s.set} className="rounded-md border border-line-2 bg-surface p-2.5">
+                      <p className="text-[11px] font-semibold text-ink">{s.set}</p>
+                      <p className="text-xs text-ink-3 tabular-nums">{s.mentioned}/{s.total} mention brand</p>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-sunken">
+                        <div className="h-full rounded-full bg-accent" style={{ width: `${s.total ? Math.round((s.mentioned / s.total) * 100) : 0}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {war.geoCoverage?.provider && (
+                <p className="mt-2 text-[10px] text-ink-3">via {war.geoCoverage.provider}{war.geoCoverage.provider === "deterministic" ? " (labeled fallback — configure a provider key for live results)" : ""}</p>
+              )}
+            </Card>
 
             <div className="grid grid-cols-1 gap-4">
               {war.competitors.map((c) => {

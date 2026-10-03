@@ -5,6 +5,10 @@
         "/^gh auth status 2>&1; echo \"---\"; git config --global user\\.name; git config --global user\\.email$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "git check-ignore": true,
+        "vercel": true,
+        "Test-Path": true,
+        "git rev-parse": true
     }
 }

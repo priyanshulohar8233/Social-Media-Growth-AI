@@ -1,0 +1,7 @@
+[
+  { "input": "I love this, amazing work!", "sentiment": "positive" },
+  { "input": "This is terrible, broken and useless", "sentiment": "negative" },
+  { "input": "How do I get early access?", "sentiment": "question" },
+  { "input": "noted", "sentiment": "neutral" },
+  { "input": "Great post! How do I get the beta?", "sentiment": "positive" }
+]

@@ -12,20 +12,56 @@ datasource db {
 // ── Core ───────────────────────────────────────────────────────────
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  passwordHash String
-  name         String
-  image        String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  memberships  Membership[]
-  auditLogs    AuditLog[]
+  id                      String                  @id @default(cuid())
+  email                   String                  @unique
+  passwordHash            String
+  name                    String
+  image                   String?
+  emailVerified           Boolean                 @default(false)
+  onboardingStep          String                  @default("REGISTERED") // REGISTERED | EMAIL_PENDING | EMAIL_VERIFIED | SOCIAL_CONNECT | BRAND_DETAILS | TOUR | COMPLETED
+  onboardingCompleted     Boolean                 @default(false)
+  onboardingTourCompleted Boolean                 @default(false)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  memberships             Membership[]
+  auditLogs               AuditLog[]
+  verificationTokens      EmailVerificationToken[]
+  brandDetails            BrandDetail[]
   // relations
-  authoredContent Content[]  @relation("AuthoredContent")
-  approvalsRequested Approval[] @relation("ApprovalRequester")
-  approvalsReviewed  Approval[] @relation("ApprovalReviewer")
-  verifiedMemories   Memory[]   @relation("MemoryVerifier")
+  authoredContent         Content[]               @relation("AuthoredContent")
+  approvalsRequested      Approval[]              @relation("ApprovalRequester")
+  approvalsReviewed       Approval[]              @relation("ApprovalReviewer")
+  verifiedMemories        Memory[]                @relation("MemoryVerifier")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model BrandDetail {
+  id           String   @id @default(cuid())
+  userId       String
+  companyId    String?
+  businessType String   // "Individual" | "Company"
+  industry     String?  // required if businessType == "Company"
+  contentType  String
+  goal         String
+  website      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([companyId])
 }
 
 model Company {
@@ -75,6 +111,7 @@ model Company {
   competitors          Competitor[]
   contentDnas          ContentDna[]
   inboxMessages        InboxMessage[]
+  geoVisibilities      GeoVisibility[]
   experiments          Experiment[]
   analyticsEvents      AnalyticsEvent[]
   performanceMetrics   PerformanceMetric[]
@@ -210,22 +247,26 @@ model AudienceSegment {
 // ── Social ─────────────────────────────────────────────────────────
 
 model SocialAccount {
-  id           String   @id @default(cuid())
-  companyId    String
+  id           String    @id @default(cuid())
+  companyId    String?
+  userId       String?
   platform     String
   handle       String
   displayName  String?
-  accessToken  String?  // encrypted
-  refreshToken String?
+  accessToken  String?   // encrypted
+  refreshToken String?   // encrypted
   tokenExpiry  DateTime?
-  status       String   @default("connected") // connected | disconnected | error
-  meta         String?  // JSON
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  scopes       String?
+  status       String    @default("connected") // connected | disconnected | error
+  connectedAt  DateTime  @default(now())
+  meta         String?   // JSON
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   @@unique([companyId, platform, handle])
   @@index([companyId])
+  @@index([userId])
 }
 
 model SocialPost {
@@ -275,6 +316,27 @@ model InboxMessage {
   @@index([companyId])
   @@index([platform])
   @@index([status])
+}
+
+// ── GEO / AI-search visibility ─────────────────────────────────────
+
+model GeoVisibility {
+  id             String   @id @default(cuid())
+  companyId      String
+  promptSet      String   // Discovery | Research | Decision
+  prompt         String
+  engine         String   @default("gateway") // AI-search engine queried (via gateway in practice)
+  brandMentioned Boolean  @default(false)
+  sentiment      String?  // positive | neutral | negative
+  position       Int?     // rank/position when the response states one
+  citations      String?  // JSON array of URLs
+  rawExcerpt     String?
+  provider       String?  // modelId@provider used, or "deterministic"
+  createdAt      DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId])
+  @@index([promptSet])
 }
 
 // ── Content & Calendar ─────────────────────────────────────────────

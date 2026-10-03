@@ -24,7 +24,8 @@ for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
 }
 
 const JWT_SECRET = env.JWT_SECRET || "dev-jwt-secret-change-in-production-32chars-min";
-const DATABASE_URL = env.DATABASE_URL || "file:./prisma/dev.db";
+const DATABASE_URL = env.DATABASE_URL;
+if (!DATABASE_URL || !DATABASE_URL.startsWith("postgres")) { console.error("FATAL: DATABASE_URL must be a Postgres URL (SQLite was removed)."); process.exit(1); }
 
 let failures = 0;
 const results = [];

@@ -20,7 +20,8 @@ for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
 }
-const DATABASE_URL = env.DATABASE_URL || "file:./prisma/dev.db";
+const DATABASE_URL = env.DATABASE_URL;
+if (!DATABASE_URL || !DATABASE_URL.startsWith("postgres")) { console.error("FATAL: DATABASE_URL must be a Postgres URL (SQLite was removed)."); process.exit(1); }
 
 const prisma = new PrismaClient({ datasources: { db: { url: DATABASE_URL } } });
 

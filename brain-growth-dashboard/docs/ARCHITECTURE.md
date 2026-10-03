@@ -10,7 +10,7 @@ dependency-ordered roadmap, and the honest feature classification.
 | Frontend | Next.js 16.3.3 (App Router, Turbopack), React 19, TypeScript (strict) |
 | Styling | Tailwind CSS v4 (`@theme` OKLCH tokens), Radix primitives, lucide icons, framer-motion, recharts |
 | Backend | Next.js Route Handlers under `src/app/api` |
-| Database / ORM | Prisma 5 + SQLite (`prisma/dev.db`) |
+| Database / ORM | Prisma 5 + PostgreSQL 16 (local portable server on :5433; SQLite removed 2026-10-03) |
 | Auth | jose JWT (Bearer + httpOnly cookie, stale-bearer fallback), bcryptjs, Google OAuth (optional) |
 | Validation | zod v4 |
 | Runtime | Node; dev/build/start configured to port **8080** |
@@ -169,5 +169,44 @@ API E2E scripts (all use a fresh random user and clean up afterwards):
 - `scripts/auth-flow-test.mjs` — auth, stale-bearer fix, cookie correctness.
 - `scripts/e2e-creator-flow.mjs` — creator workspace + profile flow.
 - `scripts/e2e-dashboard-features.mjs` — dashboard full stack, isolation, AI chat.
+- `scripts/e2e-ai-ops.mjs` — generation jobs, usage, memories, approvals, leads, calendar, competitors.
+- `scripts/e2e-brain-warroom.mjs` — adaptive brain learning, war room, inbox, media.
+- `scripts/e2e-onboarding-test.mjs` — registration, verification, social connect, brand details.
+- `scripts/e2e-moat.mjs` — cron guard, GEO sweep, MCP tools, predictive growth, crisis alerts, usage savings.
+- `scripts/eval-brain.mjs` — brain metrics from real DB rows (see `docs/BENCHMARKS.md`).
+
+Unit (Vitest, `npm run test:unit`): `tests/unit/` — confidence formula, threat
+boundaries, intent/sentiment classifiers, rate limiter, `eval/golden/` sets.
 
 Run: `PORT=8080 node scripts/<name>.mjs` with the server running on 8080.
+
+## 9. Improvement-plan phases 0–4 (implemented 2026-10-03)
+
+- **Phase 0 — Gateway/FreeLLMAPI: already wired.** `freellmapiLLM` adapter
+  (`src/lib/providers/http.ts`, OpenAI-compatible `FREELLMAPI_BASE_URL` +
+  `FREELLMAPI_API_KEY`), gateway fallback real → FreeLLMAPI → labeled mock,
+  per-attempt `AiUsage` with model/tokens/cost/latency. De-vendoring: dashboard
+  code has zero imports of the sibling `freellmapi/` tree (HTTP coupling only);
+  the directory itself was NOT deleted (it hosts the live router service).
+- **Phase 1 — Prod hardening (non-destructive subset).** `POST|GET
+  /api/cron/process-jobs` guarded by `CRON_SECRET` (jobs + optional GEO sweep);
+  extended `/api/health` (DB, queue depth, provider-key presence booleans);
+  in-memory per-IP rate limits on login/register/verify/resend (Upstash is the
+  prod upgrade); Vitest unit suite green.
+  Deferred/blocked: Postgres+pgvector cutover (no server; migration history
+  already targets postgres), refresh-token rotation (breaking auth change),
+  Inngest/Upstash (external SaaS), pino/OTel (existing redacting JSON logger kept).
+- **Phase 2 — GEO fuse.** `GeoVisibility` model + `src/lib/geo/tracker.ts`
+  (Discovery/Research/Decision sweeps via gateway, brand-mention/sentiment/
+  position/citation parsing, provider attribution), fused into `WarRoomReport`
+  (`geoShareOfVoice` + `geoCoverage`), UI card on `/dashboard/competitors`,
+  `POST /api/companies/[id]/competitors/geo`.
+- **Phase 3 — Memory proof.** `eval/golden/*.json` + `tests/unit/golden.test.ts`,
+  `scripts/eval-brain.mjs`, `docs/BENCHMARKS.md` with measured numbers.
+- **Phase 4 — Market 2026 (feasible subset).** `/api/mcp` (createContent,
+  getAnalytics, warRoomReport, publishPost-as-scheduled-draft with live=false);
+  growth `prediction` (viralityScore/bestTime/forecastReach) + UI card; inbox
+  crisis spike alerts + batch auto-draft (`/inbox/alerts`, F64 closed); usage
+  `savings` block (reference $0.003/1k).
+  Still blocked: official platform OAuth publishing (needs app keys), video
+  studio (needs provider), white-label/SOC2 (process).

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Plug, Palette, Save, Loader2, Camera } from "lucide-react";
+import { User, Bell, Shield, Plug, Palette, Save, Loader2, Camera, Sparkles, Building2, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-context";
@@ -14,7 +14,8 @@ import { apiFetch } from "@/lib/api-client";
 
 const tabs = [
   { icon: User, label: "Profile" },
-  { icon: Plug, label: "Integrations" },
+  { icon: Building2, label: "Brand Details" },
+  { icon: Plug, label: "Social Accounts" },
 ];
 
 const PLATFORM_LIST = [
@@ -24,6 +25,21 @@ const PLATFORM_LIST = [
   { platform: "twitter", emoji: "🐦" },
   { platform: "facebook", emoji: "👥" },
   { platform: "tiktok", emoji: "🎵" },
+];
+
+const INDUSTRIES = [
+  "Technology", "E-commerce", "Healthcare", "Finance", "Education",
+  "Marketing", "Restaurant", "Real Estate", "Travel", "Entertainment", "Other",
+];
+
+const CONTENT_TYPES = [
+  "Tech Product Reviews", "Educational Content", "Entertainment", "News",
+  "Fitness", "Travel", "Food", "Business", "Personal Branding", "Gaming", "Fashion", "Other",
+];
+
+const GOALS = [
+  "Gain Followers", "Gain Views", "Increase Engagement", "Generate Leads",
+  "Drive Website Traffic", "Gain Users", "Increase Brand Awareness", "Generate Sales", "Build Community",
 ];
 
 export default function SettingsPage() {
@@ -38,6 +54,16 @@ export default function SettingsPage() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // Brand Details State
+  const [businessType, setBusinessType] = useState<"Individual" | "Company">("Company");
+  const [industry, setIndustry] = useState("Technology");
+  const [contentType, setContentType] = useState("Tech Product Reviews");
+  const [goal, setGoal] = useState("Gain Followers");
+  const [website, setWebsite] = useState("");
+  const [brandSaving, setBrandSaving] = useState(false);
+  const [brandMsg, setBrandMsg] = useState<string | null>(null);
+  const [brandError, setBrandError] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -61,6 +87,60 @@ export default function SettingsPage() {
       .then((d) => setAccounts(d?.accounts ?? []))
       .catch(() => setAccounts([]));
   }, [companyId]);
+
+  // Load Brand Details
+  useEffect(() => {
+    apiFetch("/api/brand-details")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.data) {
+          const b = data.data;
+          if (b.businessType) setBusinessType(b.businessType);
+          if (b.industry) setIndustry(b.industry);
+          if (b.contentType) setContentType(b.contentType);
+          if (b.goal) setGoal(b.goal);
+          if (b.website) setWebsite(b.website);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveBrand = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBrandSaving(true);
+    setBrandMsg(null);
+    setBrandError(null);
+
+    if (businessType === "Company" && !industry.trim()) {
+      setBrandError("Industry is required for companies.");
+      setBrandSaving(false);
+      return;
+    }
+
+    try {
+      const res = await apiFetch("/api/brand-details", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessType,
+          industry: businessType === "Company" ? industry : undefined,
+          contentType,
+          goal,
+          website: website.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBrandMsg("Brand details updated successfully!");
+      } else {
+        setBrandError(data.error?.message || "Failed to save brand details.");
+      }
+    } catch {
+      setBrandError("Network error. Please try again.");
+    } finally {
+      setBrandSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -175,16 +255,131 @@ export default function SettingsPage() {
             </>
           )}
 
-          {activeTab === "Integrations" && (
+          {activeTab === "Brand Details" && (
+            <Card>
+              <div className="border-b border-line-2 p-5">
+                <h2 className="h3 text-ink">Brand Details</h2>
+                <p className="mt-0.5 text-xs text-ink-3">
+                  Configure your brand type, target goals, content strategy, and industry focus.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveBrand} className="space-y-4 p-5">
+                {brandError && (
+                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{brandError}</span>
+                  </div>
+                )}
+                {brandMsg && (
+                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>{brandMsg}</span>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="label">Business Type *</label>
+                  <div className="grid grid-cols-2 gap-3 max-w-md">
+                    <button
+                      type="button"
+                      onClick={() => setBusinessType("Company")}
+                      className={`p-3 rounded-lg border text-sm font-medium flex items-center gap-2.5 transition-all ${
+                        businessType === "Company"
+                          ? "border-accent bg-accent-soft text-accent"
+                          : "border-line bg-surface text-ink-2 hover:bg-sunken"
+                      }`}
+                    >
+                      <Building2 className="h-4 w-4" /> Company
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBusinessType("Individual")}
+                      className={`p-3 rounded-lg border text-sm font-medium flex items-center gap-2.5 transition-all ${
+                        businessType === "Individual"
+                          ? "border-accent bg-accent-soft text-accent"
+                          : "border-line bg-surface text-ink-2 hover:bg-sunken"
+                      }`}
+                    >
+                      <User className="h-4 w-4" /> Individual
+                    </button>
+                  </div>
+                </div>
+
+                {businessType === "Company" && (
+                  <Field label="Industry *">
+                    <select
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value)}
+                      className="flex h-10 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:border-accent"
+                    >
+                      {INDUSTRIES.map((ind) => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
+
+                <Field label="Content Type *">
+                  <select
+                    value={contentType}
+                    onChange={(e) => setContentType(e.target.value)}
+                    className="flex h-10 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:border-accent"
+                  >
+                    {CONTENT_TYPES.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Primary Goal *">
+                  <select
+                    value={goal}
+                    onChange={(e) => setGoal(e.target.value)}
+                    className="flex h-10 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:border-accent"
+                  >
+                    {GOALS.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Website (Optional)">
+                  <Input
+                    type="url"
+                    placeholder="https://example.com"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                  />
+                </Field>
+
+                <div className="pt-2">
+                  <Button type="submit" disabled={brandSaving}>
+                    {brandSaving ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-1.5 h-4 w-4" /> Save Brand Details
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          )}
+
+          {activeTab === "Social Accounts" && (
             <Card>
               <div className="flex items-center justify-between border-b border-line-2 p-5">
                 <div>
-                  <h2 className="h3 text-ink">Connected accounts</h2>
-                  <p className="mt-0.5 text-xs text-ink-3">Manage your linked social media accounts</p>
+                  <h2 className="h3 text-ink">Connected Accounts</h2>
+                  <p className="mt-0.5 text-xs text-ink-3">Manage and link your official social media channels</p>
                 </div>
                 <Button asChild variant="outline" size="sm">
-                  <a href="/dashboard/connections">
-                    <Plug className="mr-1.5 h-3.5 w-3.5" /> Manage connections
+                  <a href="/onboarding/social-connect">
+                    <Plug className="mr-1.5 h-3.5 w-3.5" /> Reconnect Accounts
                   </a>
                 </Button>
               </div>

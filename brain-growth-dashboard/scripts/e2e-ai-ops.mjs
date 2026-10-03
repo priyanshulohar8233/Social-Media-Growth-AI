@@ -72,12 +72,19 @@ async function sign(claims) {
 
 (async () => {
   try {
+    // Baseline counts — cleanup must restore these (no test-artifact leaks,
+    // no collateral deletion of pre-existing rows).
+    const [usersBefore, companiesBefore] = await Promise.all([
+      prisma.user.count(),
+      prisma.company.count(),
+    ]);
+
     // 1. Register owner
     const reg = await request("/api/auth/register", {
       method: "POST",
       body: { name: `Ops Tester`, email: `${identity}@test.dev`, password },
     });
-    ok(reg.status === 200, `register → ${reg.status}`);
+    ok(reg.status === 201, `register → ${reg.status}`);
     token = reg.json?.token;
     cookie = (reg.headers?.["set-cookie"]?.[0] || "").split(";")[0];
     ok(!!token && !!cookie, "register returns token + cookie");
@@ -240,7 +247,7 @@ async function sign(claims) {
     await prisma.user.deleteMany({ where: { email: { in: [`${identity}@test.dev`, `viewer-${identity}@test.dev`] } } });
 
     const [users, companies] = await Promise.all([prisma.user.count(), prisma.company.count()]);
-    ok(users === 1 && companies === 1, `cleanup → users=${users} companies=${companies}`);
+    ok(users === usersBefore && companies === companiesBefore, `cleanup → users=${users} companies=${companies} (baseline ${usersBefore}/${companiesBefore})`);
   } catch (e) {
     fail++;
     results.push(`FAIL  unexpected error: ${e?.message || e}`);

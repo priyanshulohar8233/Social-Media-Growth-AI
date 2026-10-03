@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-server";
 import { assertMembership } from "@/lib/tenant";
+import { encryptToken } from "@/lib/crypto";
 
 export async function GET(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const { companyId } = await params;
@@ -61,6 +62,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
   if (!platform) return NextResponse.json({ error: "platform required" }, { status: 400 });
 
   if (action === "connect") {
+    // API keys are encrypted at rest (AES-256-GCM) — never stored in plaintext.
+    const encKey = apiKey && apiKey.trim() ? encryptToken(apiKey.trim()) : null;
     // Reuse the existing account for this platform (one account per platform)
     const existing = await prisma.socialAccount.findFirst({
       where: { companyId, platform },
@@ -72,7 +75,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
           status: "connected",
           handle: handle || existing.handle,
           displayName: platform.charAt(0).toUpperCase() + platform.slice(1),
-          ...(apiKey ? { accessToken: apiKey } : {}),
+          ...(encKey !== null ? { accessToken: encKey } : {}),
         },
       });
       return NextResponse.json({ account }, { status: 200 });
@@ -84,7 +87,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
         handle: handle || `@${platform.toLowerCase()}`,
         displayName: platform.charAt(0).toUpperCase() + platform.slice(1),
         status: "connected",
-        accessToken: apiKey || null,
+        accessToken: encKey,
         meta: JSON.stringify({ followers: 0 }),
       },
     });

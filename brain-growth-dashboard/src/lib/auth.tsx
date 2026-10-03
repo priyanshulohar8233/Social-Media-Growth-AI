@@ -8,6 +8,10 @@ interface User {
   name: string;
   email: string;
   provider?: string;
+  emailVerified?: boolean;
+  onboardingStep?: string;
+  onboardingCompleted?: boolean;
+  onboardingTourCompleted?: boolean;
 }
 
 interface AuthContextType {
@@ -93,12 +97,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
-        setUser(data.user);
-        localStorage.setItem("braingrow-user", JSON.stringify(data.user));
-        if (data.token) setStoredToken(data.token);
+        const u = data.data?.user || data.user;
+        const t = data.data?.token || data.token;
+        setUser(u);
+        localStorage.setItem("braingrow-user", JSON.stringify(u));
+        if (t) setStoredToken(t);
         return { success: true };
       }
-      return { success: false, error: data.error || "Registration failed" };
+      const errMsg = typeof data.error === "object" ? data.error?.message : data.error;
+      return { success: false, error: errMsg || "Registration failed" };
     } catch {
       return { success: false, error: "Network error. Please try again." };
     }

@@ -9,7 +9,16 @@ export async function GET(request: Request) {
   }
   const user = await prisma.user.findUnique({
     where: { id: auth.userId },
-    select: { id: true, email: true, name: true, image: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      image: true,
+      emailVerified: true,
+      onboardingStep: true,
+      onboardingCompleted: true,
+      onboardingTourCompleted: true,
+    },
   });
   if (!user) return NextResponse.json({ authenticated: false }, { status: 401 });
 

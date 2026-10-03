@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 8080",
+    "db:start": "node scripts/db-start.mjs",
+    "db:migrate": "prisma migrate deploy",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -13,6 +15,9 @@
     "test:dashboard": "node scripts/e2e-dashboard-features.mjs",
     "test:ops": "node scripts/e2e-ai-ops.mjs",
     "test:brain": "node scripts/e2e-brain-warroom.mjs",
+    "test:unit": "vitest run",
+    "test:moat": "node scripts/e2e-moat.mjs",
+    "test:onboarding": "node scripts/e2e-onboarding-test.mjs",
     "worker": "node scripts/worker.mjs"
   },
   "dependencies": {
@@ -41,6 +46,7 @@
     "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-is": "^19.3.0",
     "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
     "uuid": "^14.0.2",
@@ -57,6 +63,8 @@
     "eslint-config-next": "16.3.3",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }

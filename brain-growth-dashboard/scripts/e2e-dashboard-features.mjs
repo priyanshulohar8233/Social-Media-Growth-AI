@@ -74,12 +74,19 @@ async function sign(claims) {
 
 (async () => {
   try {
+    // Baseline counts — cleanup must restore these (no test-artifact leaks,
+    // no collateral deletion of pre-existing rows).
+    const [usersBefore, companiesBefore] = await Promise.all([
+      prisma.user.count(),
+      prisma.company.count(),
+    ]);
+
     // 1. Register a fresh user (real flow)
     const reg = await request("/api/auth/register", {
       method: "POST",
       body: { name: `Dash Tester`, email: `${identity}@test.dev`, password },
     });
-    ok(reg.status === 200, `register → ${reg.status}`);
+    ok(reg.status === 201, `register → ${reg.status}`);
     token = reg.json?.token;
     const setCookie = reg.headers?.["set-cookie"]?.[0] || "";
     cookie = setCookie.split(";")[0];
@@ -201,7 +208,7 @@ async function sign(claims) {
       headers: auth.bearer,
       body: { platform: "instagram", action: "connect" },
     });
-    ok(conn.status === 201, `reconnect → ${conn.status}`);
+    ok(conn.status === 200, `reconnect → ${conn.status}`);
 
     // 11. PATCH /api/auth/me (settings profile save)
     const patch = await request("/api/auth/me", {
@@ -226,7 +233,7 @@ async function sign(claims) {
       prisma.user.count(),
       prisma.company.count(),
     ]);
-    ok(users === 1 && companies === 1, `cleanup → users=${users} companies=${companies}`);
+    ok(users === usersBefore && companies === companiesBefore, `cleanup → users=${users} companies=${companies} (baseline ${usersBefore}/${companiesBefore})`);
   } catch (e) {
     fail++;
     results.push(`FAIL  unexpected error: ${e?.message || e}`);

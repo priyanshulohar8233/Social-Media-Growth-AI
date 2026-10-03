@@ -52,3 +52,33 @@ never from screenshots. Test state: `test:auth` 29/29, `test:creator` clean, `te
 ### Remaining work
 
 24. **[REMAINING]** (a) implement F64 crisis/sentiment escalation alerts; (b) deepen thin creator surfaces (brand deals, documents, collaborations, monetization) and add e2e for content-dna/trends; (c) eliminate pre-existing lint debt in untouched legacy files (`theme-provider`, `auth.tsx`, some charts) so `npm run lint` is fully clean; (d) supply provider keys to flip the blocked items live; (e) keep `docs/FEATURE_MATRIX.md` aligned with the verbatim Master Prompt list when available.
+
+---
+
+## Addendum — Improvement-plan phases 0–4 (implemented 2026-10-03)
+
+The PDF plan was implemented end-to-end except items blocked by missing external
+provisioning (no Postgres server, no SaaS accounts/keys) or requiring breaking
+changes (refresh-token rotation, vendored-dir deletion). Verification on the final
+build: `tsc` clean, `next build` clean, unit 49/49, auth 29/29, onboarding 34/34,
+dashboard 46/46, ops 43/43, brain 48/48, moat 31/31, creator clean.
+
+- **Phase 0:** already wired (FreeLLMAPI adapter, gateway fallback, per-attempt
+  AiUsage). Verified zero code imports of vendored `freellmapi/` (HTTP-only);
+  directory retained — it hosts the live router service.
+- **Phase 1:** CRON-guarded `/api/cron/process-jobs`, extended `/api/health`,
+  per-IP rate limits on auth routes, Vitest suite. Deferred: Postgres cutover
+  (blocked, no server), refresh rotation (breaking), Inngest/Upstash (blocked,
+  working substitutes shipped), pino/OTel (existing redacting logger kept).
+- **Phase 2:** GEO tracker (`GeoVisibility` + sweeps + War Room fusion + UI).
+- **Phase 3:** `eval/golden/`, `scripts/eval-brain.mjs`, `docs/BENCHMARKS.md`
+  with measured numbers (precision 0.50 n=2, calibration direction correct,
+  approval coverage 0.67).
+- **Phase 4:** `/api/mcp` (4 tools, publishPost queues with `live:false`),
+  growth prediction + UI card, inbox crisis alerts + auto-draft (F64 now WORKING),
+  usage saved-$ metric.
+- **Phase 5:** this file, `docs/ARCHITECTURE.md` §9, `docs/FEATURE_MATRIX.md`
+  supplement, `.env.example` corrections, README 30-60-90.
+
+Item 24(a) is now done (F64 WORKING). Still blocked: live LLM keys, platform
+OAuth app keys, Postgres server, video provider, Upstash/Inngest accounts.

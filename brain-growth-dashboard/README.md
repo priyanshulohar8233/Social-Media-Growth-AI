@@ -1,5 +1,39 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## BrainGrow — AI Growth Operating System
+
+Multi-tenant AI social-media OS: Company Brain + adaptive learning, Competitor War
+Room (+ GEO share-of-voice), agent workflows, approvals, inbox with crisis alerts,
+media library, MCP tools, and full e2e coverage. Details: `docs/ARCHITECTURE.md`,
+`docs/FEATURE_MATRIX.md`, `docs/BENCHMARKS.md`, `docs/FINAL_REPORT.md`.
+
+## Local Postgres (only database — SQLite was removed 2026-10-03)
+
+- Engine: portable PostgreSQL 16.8, no install/admin needed.
+- Binaries: `%LOCALAPPDATA%/braingrow-pg/dist` · Data: `%LOCALAPPDATA%/braingrow-pg/data`
+- Start it: `npm run db:start` (listens on `127.0.0.1:5433`, database `braingrow`).
+- `.env`: `DATABASE_URL="postgresql://postgres@localhost:5433/braingrow?schema=public"`
+- Migrations: `npx prisma migrate dev` (creates a delta) · `npm run db:migrate` (deploy).
+
+## Going hosted (Vercel Postgres / Neon / Supabase)
+
+1. Create a hosted Postgres and copy its URL.
+2. Local: paste it as `DATABASE_URL` in `.env`, then `npm run db:migrate`.
+3. Vercel: set the same `DATABASE_URL` env var (Production) and redeploy —
+   `vercel-build` runs `migrate deploy` automatically. Zero code changes needed.
+
+## 30-60-90 roadmap (from the improvement plan)
+
+- **Done (this round):** FreeLLMAPI gateway wiring verified, CRON-guarded job drain,
+  extended health, auth rate limits, Vitest unit suite (45/45), GEO tracker fused
+  into the War Room, eval harness + BENCHMARKS.md, MCP tools, predictive growth
+  score, inbox crisis alerts + auto-draft, usage saved-$ metric.
+- **Next 30:** Postgres + pgvector cutover (needs a server), 2-platform official
+  OAuth, GEO v1 hardening, refresh-token rotation.
+- **Next 60:** Video repurposing, white-label agency surfaces, inbox LLM classifier
+  upgrade (lexicon → gateway-routed).
+- **Next 90:** SOC2-ready audit trail review, public demo with real provider keys.
+
 ## Getting Started
 
 First, run the development server:

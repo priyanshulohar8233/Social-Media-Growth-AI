@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { buildBrainContext, brainContextToPrompt } from "@/lib/brain";
 import { aiGenerate } from "@/lib/ai/gateway";
 import { logger } from "@/lib/logger";
+import { geoShareOfVoice, type GeoCoverage } from "@/lib/geo/tracker";
 
 /*
  * Competitor War Room — intelligence module.
@@ -45,6 +46,8 @@ export interface WarRoomReport {
   totalCompetitors: number;
   avgThreat: number;
   topGapTopics: string[];
+  geoShareOfVoice: number | null; // 0..100, null when no GEO rows in window
+  geoCoverage: GeoCoverage | null;
 }
 
 const THREAT = {
@@ -61,7 +64,7 @@ function clampScore(n: number): number {
   return Math.round(Math.max(6, Math.min(THREAT.max, n)));
 }
 
-function threatLabel(score: number): WarRoomCompetitor["threatLabel"] {
+export function threatLabel(score: number): WarRoomCompetitor["threatLabel"] {
   if (score >= 75) return "Critical";
   if (score >= 55) return "High";
   if (score >= 38) return "Moderate";
@@ -225,6 +228,7 @@ export async function buildWarRoom(params: { companyId: string; userId: string }
 
   const modelUsed = analyzed.find((a) => a.whyWinningProvider !== "deterministic" && a.whyWinningProvider !== "n/a");
   const splitProvider = modelUsed?.whyWinningProvider.split("@") ?? [];
+  const geo = await geoShareOfVoice(companyId);
   return {
     competitors: analyzed,
     generatedAt: new Date().toISOString(),
@@ -233,6 +237,8 @@ export async function buildWarRoom(params: { companyId: string; userId: string }
     totalCompetitors: analyzed.length,
     avgThreat,
     topGapTopics: topGaps,
+    geoShareOfVoice: geo.share,
+    geoCoverage: geo.total > 0 ? geo : null,
   };
 }
 

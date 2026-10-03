@@ -53,7 +53,7 @@ type ProfileKey = keyof typeof profiles;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, loginWithProvider, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, register, loginWithProvider, isAuthenticated, loading: authLoading, user } = useAuth();
   const { companies, loading: companyLoading } = useCompany();
   const [profile, setProfile] = useState<ProfileKey>("BUSINESS");
   const [isLogin, setIsLogin] = useState(true);
@@ -83,11 +83,20 @@ export default function LoginPage() {
         setOauthLoading(null);
         if (r.success) {
           setSuccess("Connected with Google (mock)! Redirecting...");
+          // Check actual onboarding state, never skip to dashboard
           setTimeout(() => {
-            apiFetch("/api/companies")
+            apiFetch("/api/auth/me")
               .then((res) => res.json())
-              .then((d) => (d.companies?.length ? router.push("/dashboard") : router.push("/onboarding")))
-              .catch(() => router.push("/dashboard"));
+              .then((d) => {
+                const u = d.user;
+                if (!u) { router.push("/"); return; }
+                if (!u.emailVerified) { router.push("/verify-email"); return; }
+                if (u.onboardingCompleted) { router.push("/dashboard"); return; }
+                if (u.onboardingStep === "BRAND_DETAILS") { router.push("/onboarding/brand-details"); return; }
+                if (u.onboardingStep === "TOUR") { router.push("/onboarding/tour"); return; }
+                router.push("/onboarding");
+              })
+              .catch(() => router.push("/onboarding"));
           }, 500);
         } else setError(r.error || "OAuth failed");
       });
@@ -95,14 +104,15 @@ export default function LoginPage() {
     }
   }, [loginWithProvider, router]);
 
+  // Redirect already-authenticated users based on their onboarding state
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      if (!companyLoading) {
-        if (companies.length === 0) router.push("/onboarding");
-        else router.push("/dashboard");
-      }
-    }
-  }, [isAuthenticated, authLoading, companyLoading, companies, router]);
+    if (authLoading || !isAuthenticated || !user) return;
+    if (!user.emailVerified) { router.push("/verify-email"); return; }
+    if (user.onboardingCompleted) { router.push("/dashboard"); return; }
+    if (user.onboardingStep === "BRAND_DETAILS") { router.push("/onboarding/brand-details"); return; }
+    if (user.onboardingStep === "TOUR") { router.push("/onboarding/tour"); return; }
+    router.push("/onboarding");
+  }, [authLoading, isAuthenticated, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,23 +131,49 @@ export default function LoginPage() {
     if (result.success) {
       if (isLogin) {
         setSuccess("Welcome! Redirecting...");
+        // Always check onboarding state from server — never assume
         setTimeout(() => {
-          apiFetch("/api/companies")
+          apiFetch("/api/auth/me")
             .then((r) => r.json())
-            .then((d) => (d.companies?.length ? router.push("/dashboard") : router.push("/onboarding")))
+            .then((d) => {
+              const u = d.user;
+              if (!u) { router.push("/login"); return; }
+              if (!u.emailVerified) { router.push("/verify-email"); return; }
+              if (u.onboardingCompleted) { router.push("/dashboard"); return; }
+              if (u.onboardingStep === "BRAND_DETAILS") { router.push("/onboarding/brand-details"); return; }
+              if (u.onboardingStep === "TOUR") { router.push("/onboarding/tour"); return; }
+              router.push("/onboarding");
+            })
             .catch(() => router.push("/dashboard"));
         }, 500);
       } else {
-        setSuccess("Account created! Redirecting to onboarding...");
-        setTimeout(() => router.push("/onboarding"), 800);
+        setSuccess("Account created! Please verify your email...");
+        setTimeout(() => router.push("/verify-email"), 800);
       }
     } else {
       setError(result.error || (isLogin ? "Login failed" : "Registration failed"));
     }
   };
 
+  const smartRedirect = async () => {
+    try {
+      const r = await apiFetch("/api/auth/me");
+      const d = await r.json();
+      const u = d.user;
+      if (!u) { router.push("/"); return; }
+      if (!u.emailVerified) { router.push("/verify-email"); return; }
+      if (u.onboardingCompleted) { router.push("/dashboard"); return; }
+      if (u.onboardingStep === "BRAND_DETAILS") { router.push("/onboarding/brand-details"); return; }
+      if (u.onboardingStep === "TOUR") { router.push("/onboarding/tour"); return; }
+      router.push("/onboarding");
+    } catch {
+      router.push("/onboarding");
+    }
+  };
+
   const handleOAuth = async (provider: string) => {
     if (provider === "Google") {
+      // Full OAuth redirect — server callback handles onboarding routing
       window.location.href = "/api/auth/google";
       return;
     }
@@ -148,12 +184,7 @@ export default function LoginPage() {
     setOauthLoading(null);
     if (result.success) {
       setSuccess(`Connected with ${provider}! Redirecting...`);
-      setTimeout(() => {
-        apiFetch("/api/companies")
-          .then((r) => r.json())
-          .then((d) => (d.companies?.length ? router.push("/dashboard") : router.push("/onboarding")))
-          .catch(() => router.push("/dashboard"));
-      }, 500);
+      setTimeout(() => smartRedirect(), 500);
     } else {
       setError(result.error || "OAuth failed");
     }

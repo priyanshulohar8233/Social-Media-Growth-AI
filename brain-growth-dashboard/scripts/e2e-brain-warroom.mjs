@@ -73,12 +73,19 @@ async function sign(claims) {
 
 (async () => {
   try {
+    // Baseline counts — cleanup must restore these (no test-artifact leaks,
+    // no collateral deletion of pre-existing rows).
+    const [usersBefore, companiesBefore] = await Promise.all([
+      prisma.user.count(),
+      prisma.company.count(),
+    ]);
+
     // 1. Register a fresh user (real flow)
     const reg = await request("/api/auth/register", {
       method: "POST",
       body: { name: `Brain Tester`, email: `${identity}@test.dev`, password },
     });
-    ok(reg.status === 200, `register → ${reg.status}`);
+    ok(reg.status === 201, `register → ${reg.status}`);
     token = reg.json?.token;
     cookie = (reg.headers?.["set-cookie"]?.[0] || "").split(";")[0];
     const auth = { Authorization: `Bearer ${token}`, Cookie: cookie };
@@ -245,7 +252,7 @@ async function sign(claims) {
       prisma.company.count(),
       prisma.learningEvent.count({ where: { companyId } }),
     ]);
-    ok(users === 1 && companies === 1, `cleanup → users=${users} companies=${companies}`);
+    ok(users === usersBefore && companies === companiesBefore, `cleanup → users=${users} companies=${companies} (baseline ${usersBefore}/${companiesBefore})`);
     ok(leaks === 0, "no orphaned learning events after cleanup");
   } catch (e) {
     fail++;

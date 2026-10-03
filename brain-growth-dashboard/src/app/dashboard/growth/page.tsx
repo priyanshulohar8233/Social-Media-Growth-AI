@@ -65,6 +65,11 @@ type GrowthData = {
   projectedFollowers: number | null;
   hasHistory: boolean;
   goals: GrowthGoal[];
+  prediction: {
+    viralityScore: number | null;
+    bestTime: string | null;
+    forecastReach: number | null;
+  } | null;
   generatedBy: string;
 };
 
@@ -126,10 +131,24 @@ export default function GrowthPage() {
   ];
 
   const hasSeries = data.growthData.length > 0;
+  const pred = data.prediction;
 
   return (
     <div className="space-y-6">
       <PageHeader title="Growth" description="Track real reach trajectory and hit your goals." />
+
+      {/* Pre-publish prediction from real engagement history */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <span className="caption text-ink-3">Predicted for your next post</span>
+          <span className="text-sm text-ink">Virality score: <strong className="tabular-nums">{pred?.viralityScore ?? "—"}</strong><span className="text-xs text-ink-3">/100</span></span>
+          <span className="text-sm text-ink">Best time: <strong>{pred?.bestTime ?? "—"}</strong></span>
+          <span className="text-sm text-ink">Forecast reach: <strong className="tabular-nums">{pred?.forecastReach?.toLocaleString() ?? "—"}</strong></span>
+        </div>
+        {pred?.viralityScore === null && pred?.bestTime === null && (
+          <p className="mt-1 text-xs text-ink-3">Scores appear once engagement events land — nothing is estimated without data.</p>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {cards.map((c) => (
