@@ -15,7 +15,8 @@ import { decryptToken } from "../src/lib/crypto.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = process.env.PORT || "8080";
-const BASE = `http://localhost:${PORT}`;
+const BASE = process.env.BASE_URL || `http://localhost:${PORT}`;
+const PROTECTION_BYPASS = process.env.PROTECTION_BYPASS || "";
 
 const env = {};
 for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
@@ -23,7 +24,7 @@ for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
   if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
 }
 
-const DATABASE_URL = env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || env.DATABASE_URL;
 if (!DATABASE_URL || !DATABASE_URL.startsWith("postgres")) { console.error("FATAL: DATABASE_URL must be a Postgres URL (SQLite was removed)."); process.exit(1); }
 const prisma = new PrismaClient({ datasources: { db: { url: DATABASE_URL } } });
 
@@ -44,7 +45,9 @@ async function api(pathname, { method = "GET", token, cookie, body } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (cookie) headers.Cookie = cookie;
-  const res = await fetch(`${BASE}${pathname}`, {
+  const sep = pathname.includes("?") ? "&" : "?";
+  const url = `${BASE}${pathname}` + (PROTECTION_BYPASS ? `${sep}x-vercel-protection-bypass=${PROTECTION_BYPASS}` : "");
+  const res = await fetch(url, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
