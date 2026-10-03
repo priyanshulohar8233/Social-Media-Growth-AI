@@ -22,7 +22,6 @@ function loadEnv() {
   } catch {}
 }
 loadEnv();
-const CRON_SECRET = (process.env.CRON_SECRET || "").trim();
 
 const identity = `moat-${Math.random().toString(36).slice(2, 9)}`;
 const password = "Test@12345";
@@ -83,13 +82,14 @@ function request(path, { method = "GET", body, headers = {} } = {}) {
     ok(typeof prov.openai === "boolean" && typeof prov.freellmapi === "boolean", "health provider presence flags");
     ok(!JSON.stringify(prov).includes("sk-"), "health leaks no secret values");
 
-    // 1. Cron guard behavior
+    // 1. Cron guard behavior (works with or without a configured secret)
+    const cronSecret = process.env.CRON_SECRET || "";
     const cronNoAuth = await request("/api/cron/process-jobs", { method: "POST", body: {} });
-    if (CRON_SECRET) {
-      ok(cronNoAuth.status === 401, `cron without secret → ${cronNoAuth.status}`);
+    ok(cronNoAuth.status === 401 || cronNoAuth.status === 503, `cron guarded without secret → ${cronNoAuth.status}`);
+    if (cronSecret) {
       const cronOk = await request("/api/cron/process-jobs", {
         method: "POST",
-        headers: { Authorization: `Bearer ${CRON_SECRET}` },
+        headers: { Authorization: `Bearer ${cronSecret}` },
         body: { tasks: ["jobs"], batch: 2 },
       });
       ok(cronOk.status === 200 && cronOk.json?.success === true, "cron drain with secret works");
