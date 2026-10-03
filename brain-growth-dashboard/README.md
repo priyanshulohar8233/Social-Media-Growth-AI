@@ -9,11 +9,18 @@ media library, MCP tools, and full e2e coverage. Details: `docs/ARCHITECTURE.md`
 
 ## Local Postgres (only database — SQLite was removed 2026-10-03)
 
-- Engine: portable PostgreSQL 16.8, no install/admin needed.
-- Binaries: `%LOCALAPPDATA%/braingrow-pg/dist` · Data: `%LOCALAPPDATA%/braingrow-pg/data`
-- Start it: `npm run db:start` (listens on `127.0.0.1:5433`, database `braingrow`).
-- `.env`: `DATABASE_URL="postgresql://postgres@localhost:5433/braingrow?schema=public"`
-- Migrations: `npx prisma migrate dev` (creates a delta) · `npm run db:migrate` (deploy).
+> **2026-10-03 update: fully online.** The local portable server was removed.
+> The single database is the hosted Neon Postgres (`braingrow` database, separate
+> from other projects on the same cluster). `DATABASE_URL`, `JWT_SECRET`,
+> `ENCRYPTION_SECRET`, `CRON_SECRET` and OAuth keys live **only in Vercel env**
+> — nothing secret is stored in local files. Local runs need these exported
+> explicitly; e2e suites accept `BASE_URL` + `PROTECTION_BYPASS` to run against
+> the live deployment.
+
+- Engine history: portable PostgreSQL 16.8 was used only as a migration bridge.
+- Migrations: `prisma/migrations/` (init + delta) apply via `vercel-build`.
+- To run anything locally: export `DATABASE_URL` (from Vercel env pull) explicitly;
+  never commit it.
 
 ## Going hosted (Vercel Postgres / Neon / Supabase)
 
