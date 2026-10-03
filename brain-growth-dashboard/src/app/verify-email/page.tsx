@@ -22,6 +22,7 @@ function VerifyEmailContent() {
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [devLink, setDevLink] = useState<string | null>(null);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -84,8 +85,14 @@ function VerifyEmailContent() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setResendSuccess("Verification email has been sent! Please check your inbox.");
         setCooldown(data.data?.cooldownSeconds || 45);
+        if (data.data?.delivered === false) {
+          // Honest degradation: no mail provider configured on this server.
+          setResendSuccess(data.data?.message || "Email delivery is not configured on this server.");
+          if (data.data?.devLink) setDevLink(data.data.devLink);
+        } else {
+          setResendSuccess("Verification email has been sent! Please check your inbox.");
+        }
       } else {
         if (data.error?.code === "RATE_LIMITED") {
           setCooldown(data.error?.remainingSeconds || 45);
@@ -167,6 +174,22 @@ function VerifyEmailContent() {
                   <div className="flex items-center gap-2.5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span>{resendSuccess}</span>
+                  </div>
+                )}
+
+                {devLink && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-sm text-left space-y-2">
+                    <p className="font-medium">Email provider not configured</p>
+                    <p className="text-xs opacity-90">
+                      No mail provider is set up on this server, so nothing was sent. Use this
+                      link to verify manually (expires in 24h):
+                    </p>
+                    <Link
+                      href={devLink}
+                      className="block text-xs underline break-all break-words"
+                    >
+                      {devLink}
+                    </Link>
                   </div>
                 )}
 

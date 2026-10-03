@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { appBaseUrl, envStr } from "@/lib/env";
 
 export async function GET(request: Request) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const baseUrl = new URL(request.url).origin;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${baseUrl}/api/auth/callback/google`;
+  const clientId = envStr("GOOGLE_CLIENT_ID");
+  const baseUrl = appBaseUrl(new URL(request.url).origin);
+  const redirectUri = envStr("GOOGLE_REDIRECT_URI") || `${baseUrl}/api/auth/callback/google`;
 
   // Dev fallback: if no real credentials, use mock Google user (so button still works without setup)
   if (!clientId) {

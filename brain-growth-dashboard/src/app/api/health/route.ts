@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { envHas } from "@/lib/env";
 
 /**
  * Extended health — status of the app plus its dependencies.
@@ -23,12 +24,14 @@ export async function GET() {
     checks: {
       db,
       queuedJobs,
-      cron: Boolean(process.env.CRON_SECRET?.trim()),
+      cron: envHas("CRON_SECRET"),
+      appUrl: envHas("NEXT_PUBLIC_APP_URL"),
+      encryption: envHas("ENCRYPTION_SECRET") || envHas("JWT_SECRET"),
       providers: {
-        openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
-        anthropic: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
-        freellmapi: Boolean(process.env.FREELLMAPI_API_KEY?.trim()),
-        resend: Boolean(process.env.RESEND_API_KEY?.trim()),
+        openai: envHas("OPENAI_API_KEY"),
+        anthropic: envHas("ANTHROPIC_API_KEY"),
+        freellmapi: envHas("FREELLMAPI_API_KEY"),
+        resend: envHas("RESEND_API_KEY"),
       },
     },
   });

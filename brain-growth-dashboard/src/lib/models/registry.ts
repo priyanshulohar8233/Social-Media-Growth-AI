@@ -1,11 +1,12 @@
 import { ModelDef, Capability, ModelPolicy, ProviderName } from "./types";
+import { envHas } from "../env";
 
 // Auto-enable providers whose API keys are configured in env.
 let envApplied = false;
 function applyEnvOverrides(): void {
   if (envApplied) return;
   envApplied = true;
-  if (process.env.FREELLMAPI_API_KEY?.trim()) {
+  if (envHas("FREELLMAPI_API_KEY")) {
     for (const m of MODELS) {
       if (m.provider === "freellmapi") m.enabled = true;
     }

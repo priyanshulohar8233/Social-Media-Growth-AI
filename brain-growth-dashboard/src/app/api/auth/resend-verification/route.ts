@@ -5,6 +5,7 @@ import { generateSecureToken, hashToken } from "@/lib/crypto";
 import { sendVerificationEmail } from "@/lib/email";
 import { auditLog, getClientIp } from "@/lib/audit";
 import { rateLimit } from "@/lib/rate-limit";
+import { appBaseUrl } from "@/lib/env";
 
 const COOLDOWN_SECONDS = 45;
 
@@ -105,10 +106,10 @@ export async function POST(request: Request) {
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    const baseUrl = appBaseUrl(new URL(request.url).origin);
     const verificationUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(rawToken)}`;
 
-    await sendVerificationEmail({
+    const mail = await sendVerificationEmail({
       to: user.email,
       name: user.name,
       verificationUrl,
@@ -121,14 +122,19 @@ export async function POST(request: Request) {
       entity: "EmailVerificationToken",
       entityId: user.id,
       ip: getClientIp(request),
-      meta: { resend: true },
+      meta: { resend: true, delivered: mail.delivered, transport: mail.transport },
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        message: "Verification email resent successfully.",
+        message: mail.delivered
+          ? "Verification email resent successfully."
+          : "Email delivery is not configured on this server (RESEND_API_KEY missing) — the verification link was logged instead.",
         cooldownSeconds: COOLDOWN_SECONDS,
+        delivered: mail.delivered,
+        transport: mail.transport,
+        devLink: mail.delivered ? undefined : mail.devLink,
       },
     });
   } catch (e) {

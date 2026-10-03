@@ -6,6 +6,7 @@ import { auditLog, getClientIp } from "@/lib/audit";
 import { generateSecureToken, hashToken } from "@/lib/crypto";
 import { sendVerificationEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
+import { appBaseUrl } from "@/lib/env";
 
 export async function POST(request: Request) {
   const rl = rateLimit(`register:${getClientIp(request) || "unknown"}`, { limit: 20 });
@@ -81,11 +82,11 @@ export async function POST(request: Request) {
     });
 
     // Construct verification URL using request origin or APP_URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    const baseUrl = appBaseUrl(new URL(request.url).origin);
     const verificationUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(rawToken)}`;
 
     // Dispatch verification email
-    await sendVerificationEmail({
+    const mail = await sendVerificationEmail({
       to: user.email,
       name: user.name,
       verificationUrl,
@@ -116,7 +117,16 @@ export async function POST(request: Request) {
             onboardingCompleted: false,
           },
           token,
-          message: "Registration successful. Please check your email to verify your account.",
+          message: mail.delivered
+            ? "Registration successful. Please check your email to verify your account."
+            : "Registration successful, but email delivery is not configured on this server (RESEND_API_KEY missing). Use the verification link returned in emailDelivery.",
+        },
+        emailDelivery: {
+          delivered: mail.delivered,
+          transport: mail.transport,
+          // Only surfaced when the link was logged server-side, never sent to a
+          // third party. Honest dev convenience, clearly flagged.
+          devLink: mail.delivered ? undefined : mail.devLink,
         },
       },
       { status: 201 }

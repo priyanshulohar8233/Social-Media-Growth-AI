@@ -3,6 +3,7 @@ import { buildBrainContext, brainContextToPrompt } from "@/lib/brain";
 import { aiGenerate } from "@/lib/ai/gateway";
 import { logger } from "@/lib/logger";
 import { geoShareOfVoice, type GeoCoverage } from "@/lib/geo/tracker";
+import { envHas } from "@/lib/env";
 
 /*
  * Competitor War Room — intelligence module.
@@ -130,7 +131,7 @@ async function analyzeCompetitor(params: {
   const deterministic = deterministicWhy(competitor.name, observations, patternKeys, gapTopics);
   let whyWinning = deterministic.text;
   let whyProvider = "deterministic";
-  const llmProvider = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY ? "available" : "mock";
+  const llmProvider = envHas("OPENAI_API_KEY") || envHas("ANTHROPIC_API_KEY") ? "available" : "mock";
 
   if (llmProvider === "available") {
     const context = `Company brain:\n${brainContextToPrompt(brain).slice(0, 2500)}\n\nCompetitor: ${competitor.name}\nObservations:\n${observations

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-server";
 import { generateSecureToken } from "@/lib/crypto";
+import { appBaseUrl, envStr } from "@/lib/env";
 
 export async function GET(
   request: Request,
@@ -16,7 +17,7 @@ export async function GET(
   }
 
   const normPlatform = platform.toLowerCase();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const baseUrl = appBaseUrl(new URL(request.url).origin);
   const callbackUrl = `${baseUrl}/api/social/callback/${normPlatform}`;
   const state = generateSecureToken(16);
 
@@ -24,7 +25,7 @@ export async function GET(
 
   switch (normPlatform) {
     case "instagram": {
-      const clientId = process.env.INSTAGRAM_CLIENT_ID;
+      const clientId = envStr("INSTAGRAM_CLIENT_ID");
       if (!clientId) {
         // Safe dev fallback simulation URL
         authUrl = `${callbackUrl}?code=dev_insta_code&state=${state}`;
@@ -35,7 +36,7 @@ export async function GET(
       break;
     }
     case "facebook": {
-      const clientId = process.env.FACEBOOK_CLIENT_ID;
+      const clientId = envStr("FACEBOOK_CLIENT_ID");
       if (!clientId) {
         authUrl = `${callbackUrl}?code=dev_fb_code&state=${state}`;
       } else {
@@ -45,7 +46,7 @@ export async function GET(
       break;
     }
     case "linkedin": {
-      const clientId = process.env.LINKEDIN_CLIENT_ID;
+      const clientId = envStr("LINKEDIN_CLIENT_ID");
       if (!clientId) {
         authUrl = `${callbackUrl}?code=dev_li_code&state=${state}`;
       } else {
@@ -55,7 +56,7 @@ export async function GET(
       break;
     }
     case "youtube": {
-      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientId = envStr("GOOGLE_CLIENT_ID");
       if (!clientId) {
         authUrl = `${callbackUrl}?code=dev_yt_code&state=${state}`;
       } else {
@@ -65,7 +66,7 @@ export async function GET(
       break;
     }
     case "twitter": {
-      const clientId = process.env.TWITTER_CLIENT_ID;
+      const clientId = envStr("TWITTER_CLIENT_ID");
       if (!clientId) {
         authUrl = `${callbackUrl}?code=dev_x_code&state=${state}`;
       } else {
@@ -75,7 +76,7 @@ export async function GET(
       break;
     }
     case "tiktok": {
-      const clientKey = process.env.TIKTOK_CLIENT_KEY;
+      const clientKey = envStr("TIKTOK_CLIENT_KEY");
       if (!clientKey) {
         authUrl = `${callbackUrl}?code=dev_tt_code&state=${state}`;
       } else {

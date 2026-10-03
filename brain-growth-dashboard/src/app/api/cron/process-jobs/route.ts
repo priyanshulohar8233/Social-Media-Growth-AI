@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { processGenerationJobs } from "@/lib/jobs/processor";
 import { runGeoSweepAll } from "@/lib/geo/tracker";
 import { logger } from "@/lib/logger";
+import { envStr } from "@/lib/env";
 
 /**
  * Cron-safe job drain — call from Vercel Cron (every 5 minutes) or any scheduler.
@@ -11,7 +12,7 @@ import { logger } from "@/lib/logger";
  * RUNNING rows are reclaimed after a timeout.
  */
 async function guard(request: Request): Promise<NextResponse | null> {
-  const secret = process.env.CRON_SECRET?.trim();
+  const secret = envStr("CRON_SECRET");
   if (!secret) {
     return NextResponse.json(
       { success: false, error: { code: "CRON_NOT_CONFIGURED", message: "CRON_SECRET is not set." } },

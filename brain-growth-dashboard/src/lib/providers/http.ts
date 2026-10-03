@@ -1,4 +1,5 @@
 import { LLMProvider, GenerateInput, GenerateOutput } from "./types";
+import { envStr, trimTrailingSlash } from "@/lib/env";
 
 // Shared helpers for real, HTTP-based provider adapters.
 // Adapters throw ProviderUnavailable when the key/model is unusable so the
@@ -33,7 +34,7 @@ export function estimateCost(costPer1k: number | undefined, tokens: number): num
 }
 
 function requireKey(name: string): string {
-  const key = process.env[name]?.trim();
+  const key = envStr(name);
   if (!key) throw new ProviderUnavailableError(`${name} is not configured — provider unavailable`);
   return key;
 }
@@ -141,7 +142,9 @@ export const freellmapiLLM: LLMProvider = {
   name: "freellmapi",
   async generate(input: GenerateInput): Promise<GenerateOutput> {
     const apiKey = requireKey("FREELLMAPI_API_KEY");
-    const baseUrl = (process.env.FREELLMAPI_BASE_URL || "https://freellmapi.onrender.com/v1").replace(/\/$/, "");
+    const baseUrl = trimTrailingSlash(
+      envStr("FREELLMAPI_BASE_URL") || "https://freellmapi.onrender.com/v1"
+    );
     const modelId = input.modelId || "gemini-2.5-flash";
     const body: Record<string, unknown> = {
       model: modelId,

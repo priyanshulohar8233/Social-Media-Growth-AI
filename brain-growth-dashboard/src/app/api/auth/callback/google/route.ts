@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { signToken } from "@/lib/auth-server";
 import { auditLog, getClientIp } from "@/lib/audit";
+import { appBaseUrl, envStr } from "@/lib/env";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -26,11 +27,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/?error=invalid_state", request.url));
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const baseUrl = new URL(request.url).origin;
-  const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI || `${baseUrl}/api/auth/callback/google`;
+  const clientId = envStr("GOOGLE_CLIENT_ID");
+  const clientSecret = envStr("GOOGLE_CLIENT_SECRET");
+  const baseUrl = appBaseUrl(new URL(request.url).origin);
+  const redirectUri = envStr("GOOGLE_REDIRECT_URI") || `${baseUrl}/api/auth/callback/google`;
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL("/?error=google_not_configured", request.url));

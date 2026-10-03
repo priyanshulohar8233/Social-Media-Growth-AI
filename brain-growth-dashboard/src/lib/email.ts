@@ -1,7 +1,22 @@
 /**
  * Email delivery service with production provider support and local development fallback.
  * Sends professional verification emails.
+ *
+ * Delivery is reported honestly: when no provider is configured the caller gets
+ * `delivered: false` and a `devLink`, so the API/UI can say "email not
+ * configured" instead of falsely claiming a message was sent.
  */
+import { envStr } from "@/lib/env";
+
+export interface SendVerificationEmailResult {
+  success: boolean;
+  /** True only when a real provider accepted the message. */
+  delivered: boolean;
+  /** Which transport actually handled it: "resend" | "log". */
+  transport: "resend" | "log";
+  messageId?: string;
+  devLink?: string;
+}
 
 interface SendVerificationEmailParams {
   to: string;
@@ -15,9 +30,9 @@ export async function sendVerificationEmail({
   name,
   verificationUrl,
   expiresInHours = 24,
-}: SendVerificationEmailParams): Promise<{ success: boolean; messageId?: string; devLink?: string }> {
+}: SendVerificationEmailParams): Promise<SendVerificationEmailResult> {
   const appName = "BrainGrow";
-  const fromEmail = process.env.EMAIL_FROM || "noreply@braingrow.ai";
+  const fromEmail = envStr("EMAIL_FROM") || "noreply@braingrow.ai";
   const subject = `Verify your email for ${appName}`;
 
   const textContent = `Welcome to ${appName}
@@ -71,12 +86,13 @@ If you did not create this account, you can safely ignore this email.
 `;
 
   // 1. Resend API integration if configured
-  if (process.env.RESEND_API_KEY) {
+  const resendKey = envStr("RESEND_API_KEY");
+  if (resendKey) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -89,7 +105,7 @@ If you did not create this account, you can safely ignore this email.
       });
       if (res.ok) {
         const data = await res.json();
-        return { success: true, messageId: data.id };
+        return { success: true, delivered: true, transport: "resend", messageId: data.id };
       }
       console.warn("[email] Resend API responded with error, falling back to log:", await res.text());
     } catch (e) {
@@ -97,7 +113,8 @@ If you did not create this account, you can safely ignore this email.
     }
   }
 
-  // 2. Local / Development fallback — structured console logger
+  // 2. Local / Development fallback — structured console logger.
+  // NOT a delivery: the caller must surface this as unconfigured, not as "sent".
   console.log("=================================================");
   console.log(`[EMAIL DISPATCH] To: ${to} | Subject: ${subject}`);
   console.log(`[VERIFICATION LINK]: ${verificationUrl}`);
@@ -105,6 +122,8 @@ If you did not create this account, you can safely ignore this email.
 
   return {
     success: true,
+    delivered: false,
+    transport: "log",
     messageId: `dev-${Date.now()}`,
     devLink: verificationUrl,
   };

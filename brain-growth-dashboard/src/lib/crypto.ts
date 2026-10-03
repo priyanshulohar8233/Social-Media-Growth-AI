@@ -1,10 +1,11 @@
 import crypto from "crypto";
+import { envStr } from "./env";
 
 /**
  * Derives a 256-bit encryption key from ENCRYPTION_SECRET or falls back to JWT_SECRET / dev secret.
  */
 function getEncryptionKey(): Buffer {
-  const secret = process.env.ENCRYPTION_SECRET || process.env.JWT_SECRET || "dev-encryption-secret-braingrow-32chars-min";
+  const secret = envStr("ENCRYPTION_SECRET") || envStr("JWT_SECRET") || "dev-encryption-secret-braingrow-32chars-min";
   return crypto.createHash("sha256").update(secret).digest();
 }
 

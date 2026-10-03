@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-server";
 import { processGenerationJobs } from "@/lib/jobs/processor";
 import { logger } from "@/lib/logger";
+import { envStr } from "@/lib/env";
 
 /**
  * Queue drain endpoint. Processes pending GenerationJobs in the background.
@@ -15,7 +16,8 @@ export async function POST(request: Request) {
   if (!userId) {
     // Allow unauthenticated drain only when a worker key is configured.
     const key = request.headers.get("x-worker-key");
-    if (!key || key !== process.env.WORKER_KEY) {
+    const workerKey = envStr("WORKER_KEY");
+    if (!key || !workerKey || key !== workerKey) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }

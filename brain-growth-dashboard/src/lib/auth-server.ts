@@ -1,11 +1,12 @@
 import bcrypt from "bcryptjs";
 import * as jose from "jose";
 import { prisma } from "./db";
+import { envStr } from "./env";
 
 import { cookies } from "next/headers";
 
 function getJwtSecret(): Uint8Array {
-  const raw = (process.env.JWT_SECRET || "").replace(/^["']|["']$/g, "").trim();
+  const raw = envStr("JWT_SECRET");
   return new TextEncoder().encode(raw || "dev-jwt-secret-change-in-production-32chars-min");
 }
 

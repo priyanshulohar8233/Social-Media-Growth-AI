@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-server";
 import { encryptToken } from "@/lib/crypto";
 import { auditLog, getClientIp } from "@/lib/audit";
+import { appBaseUrl } from "@/lib/env";
 
 export async function GET(
   request: Request,
@@ -15,7 +16,7 @@ export async function GET(
   const error = searchParams.get("error");
   const normPlatform = platform.toLowerCase();
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const baseUrl = appBaseUrl(new URL(request.url).origin);
   const redirectTarget = `${baseUrl}/onboarding/social-connect`;
 
   if (error) {
